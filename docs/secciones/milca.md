@@ -1,61 +1,82 @@
 # Datos, selección del grupo por cointegración y filtro de Kalman 1 (Milca)
 
-Todo lo que se estima o elige en esta sección usa **solo la partición de entrenamiento (train, 2011-01-03 a 2019-12-30)**. Cada cifra indica su tramo. El análisis trabaja con el **logaritmo natural** de los precios ajustados.
+Todo lo que se estima, elige o calibra en esta sección usa **solo la partición de entrenamiento (train, 2011-01-03 a 2019-12-30)**. Cada cifra indica su tramo. El análisis trabaja con el **logaritmo natural** de los precios ajustados.
 
 > **Notación.** En el filtro de Kalman, z_t es el estado oculto (los pesos β_t) y S_t es la varianza de la innovación. En Johansen, S_t = βᵀP_t es el spread. El z-score de las señales (Arturo) es otra cosa.
 
+**Resumen (train):** se buscó en **8 sectores** con un protocolo y una regla de selección **registrados en git antes de descargar los datos nuevos** (commit `e52f6a2`). Ganó el grupo de **eléctricas reguladas DUK, XEL, ED, ES, CMS y AEE (6 activos)**, el único que, además de cumplir los 7 requisitos, queda primero en el orden de la regla. Sus cifras principales:
+- correlación de retornos de 0.742 o más;
+- r̂ = 1 por las dos pruebas de Johansen;
+- ADF del spread p = 1.1·10⁻⁷ y vida media de 15.3 días;
+- estabilidad de 11/14 (79%);
+- meseta de q de 15 puntos contiguos y cero cambios de signo.
+
 ## 1. Universo de activos
 
-### 1.1 Sector y por qué
+### 1.1 Preregistro: sectores elegidos antes de mirar datos (`data/universe.json`)
 
-**Cadena de valor del oro:** minería (grandes, medianas y africanas) y financiamiento minero por regalías y *streaming*.
+La versión 4 (oro) no alcanzaba la correlación de 0.7 y tenía una estabilidad de 21%. **Antes de descargar un solo dato nuevo** se escribió y registró en git una lista de **7 sectores nuevos**, cada uno con su tendencia estocástica común. También se registraron, en el mismo archivo, sus candidatos con justificación por activo, el protocolo, la definición de meseta y la regla de selección. El oro se volvió a evaluar con el mismo protocolo. La única salvedad es el conocimiento general previo de qué sectores suelen tener retornos muy correlacionados, que es justo la razón para elegirlos.
 
-El precio del oro es una **tendencia estocástica común**, observable y dominante: es el principal determinante del ingreso de las nueve empresas.
-- Las mineras venden un producto homogéneo (onzas de oro) a un precio global único.
-- Las empresas de regalías y *streaming* cobran un porcentaje de esas mismas onzas.
+| Sector | Tendencia común | Por qué se espera equilibrio de largo plazo |
+|---|---|---|
+| Oro (v1-v4) | Precio del oro | Valor ≈ onzas × precio del oro − costos; el mismo producto a un precio global |
+| Bancos grandes | Ciclo de crédito de EE.UU., curva de tasas, regulación de la Fed | Mismos préstamos, misma curva de tasas y mismas pruebas de estrés |
+| Bancos regionales | Tasas, depósitos y crédito comercial e inmobiliario | El mismo modelo de margen financiero; se mueven en bloque |
+| Aseguradoras de daños | Ciclo de primas, catástrofes, rendimiento de bonos | El mismo producto en el mismo mercado |
+| **Eléctricas reguladas** | **Tasas de largo plazo y rendimientos autorizados por los reguladores** | **Monopolios regulados: el regulador fija su rendimiento sobre la base de activos, así que se valúan casi como un mismo bono de largo plazo** |
+| Petroleras integradas | Precio del crudo y márgenes de refinación | Todas integradas (a diferencia del intento 1 con productoras puras) |
+| Semiconductores (equipo y analógicos) | Ciclo global de inventarios y de inversión | Mismos clientes y mismos mercados finales |
+| Constructoras de vivienda | Tasas hipotecarias y demanda de vivienda nueva | El mismo producto en el mismo mercado |
 
-Otros sectores (bancos, tecnología, consumo) dependen de varios factores distintos (tasas, crédito, innovación, demanda) y no tienen un solo motor común tan claro.
+**Excluidos de antemano, con razón escrita:**
+- **Varias clases de acción o doble listado** (BRK-A/B, BF-A/B, HEI/HEI-A, LEN/LEN-B): forman grupos de 2 de la misma empresa (debajo del mínimo de 3) y su relación es contractual, no un equilibrio entre empresas.
+- **ETF sustitutos:** son el mismo portafolio.
+- **Aerolíneas:** no hay de 8 a 12 con historia desde 2011.
+- **Retail:** formatos muy distintos.
 
-**Por qué solo 9:** mientras más activos se prueban, mayor es la probabilidad de falsos positivos. Nueve activos del mismo sector dejan C(9,6) = **84 subgrupos**, y cualquier relación encontrada tiene una razón económica detrás.
+**Regla de datos (preregistrada):** un ticker sin historia completa se excluye **sin reemplazo**. Se aplicó a BK, CMA, SNV y BZH: Yahoo ya no los tiene en 2026 (fusiones o cambio de ticker). Quedan **73 activos**: 9 de oro, 9 de bancos grandes, 8 regionales, 10 aseguradoras, 10 eléctricas, 9 petroleras, 10 de semiconductores y 8 constructoras.
 
-### 1.2 Los 9 activos (configuración en `data/universe.json`)
+### 1.2 Los 10 candidatos del sector ganador (justificación por activo)
 
-| Ticker | Empresa | Parte de la cadena | Justificación económica |
+La justificación de los 73 activos está en `data/universe.json`. Aquí van los del sector ganador:
+
+| Ticker | Empresa | Segmento | Justificación |
 |---|---|---|---|
-| NEM | Newmont | Minería: productora grande, global | La mayor productora de oro; su ingreso es casi todo venta de oro a precio spot. Competidora directa de AEM y KGC |
-| AEM | Agnico Eagle | Minería: productora grande en jurisdicciones estables | Mismo producto y mismo precio global que NEM. Doble listado TSX/NYSE |
-| KGC | Kinross Gold | Minería: mediana-grande (América, África occidental) | Mayor apalancamiento operativo: se mueve más que proporcionalmente con el oro, pero en la misma dirección. Doble listado TSX/NYSE |
-| AU | AngloGold Ashanti | Minería: grande, con exposición africana | Comparte el precio del oro como motor y compite con NEM. ADR (doble listado JSE/NYSE) |
-| GFI | Gold Fields | Minería: grande (Sudáfrica, Ghana, Australia, Perú) | Misma tendencia común que AU y HMY. ADR (JSE/NYSE) |
-| HMY | Harmony Gold | Minería: sudafricana de costos altos | Alto apalancamiento al oro; competidora de AU y GFI. ADR (JSE/NYSE) |
-| FNV | Franco-Nevada | Financiamiento: regalías y *streaming* | Cobra un porcentaje de la producción de terceros sin los costos de operar. Otra parte de la cadena con el mismo motor. Doble listado TSX/NYSE |
-| WPM | Wheaton Precious Metals | Financiamiento: *streaming* de oro y plata | Compra metal a precio fijo bajo; su margen sigue al oro y a la plata. Competidora de FNV y RGLD |
-| RGLD | Royal Gold | Financiamiento: regalías y *streaming* | Modelo igual al de FNV y WPM; ingreso ligado al oro |
+| DUK | Duke Energy | Regulada (Carolinas, Florida, Medio Oeste) | Gran eléctrica regulada, valuada por su base de activos |
+| SO | Southern Company | Regulada (Sureste) | Mismo modelo regulado que DUK |
+| AEP | American Electric Power | Regulada y transmisión | Mismo motor de tasas |
+| **XEL** | Xcel Energy | Regulada (Medio Oeste, Colorado) | Mismo modelo de rendimiento autorizado |
+| **ED** | Consolidated Edison | Eléctrica y gas (Nueva York) | De muy bajo riesgo; casi un bono |
+| WEC | WEC Energy | Eléctrica y gas (Wisconsin) | Mismo modelo que XEL y CMS |
+| **ES** | Eversource | Distribución (Nueva Inglaterra) | Eléctrica regulada de distribución |
+| **CMS** | CMS Energy | Eléctrica y gas (Michigan) | Mismo regulador estatal que DTE |
+| DTE | DTE Energy | Eléctrica y gas (Michigan) | Mismo estado y regulador que CMS |
+| **AEE** | Ameren | Regulada (Misuri, Illinois) | Mismo modelo de base de activos |
 
-**Por qué se espera un equilibrio de largo plazo:** el valor de cada empresa es, en esencia, onzas por precio del oro, menos costos. Si una se aleja mucho de las demás sin un cambio en sus onzas o costos, el mercado debería corregir la diferencia.
+### 1.3 Historia de búsquedas (transparencia)
 
-**Cambio forzado por datos:** Barrick Gold (GOLD) se excluyó porque Yahoo solo tiene su historia desde 2014-03-17 (cambió de ticker ABX a GOLD). Se reemplazó por Harmony Gold (HMY), que sí tiene historia completa. La decisión se tomó por disponibilidad de datos, no por rendimientos.
+- **v1:** 9 productoras de petróleo (84 subgrupos). Ninguno pasó la correlación (máximo 0.647). Registro en `artifacts/cointegration/intento1_energia_etapa2.csv`.
+- **Versiones anteriores del equipo:** 2 × 8,008 grupos de 16 petroleras sobre este mismo train.
+- **v2-v4:** oro.
+- **v5 (esta):** los 8 sectores del preregistro.
 
-### 1.3 Transparencia: data snooping en la elección del universo (desviación declarada)
-
-- **Se probaron dos sectores.** Primero 9 productoras de petróleo (IMO, SU, CVE, CNQ, DVN, OVV, APA, MUR, OXY; registro en `artifacts/cointegration/intento1_energia_etapa2.csv`): ninguno de sus 84 subgrupos pasó la correlación de retornos (máximo **0.647**). **El oro se eligió después de que el primero fallara.** Es un grado de libertad del investigador y se cuenta en las pruebas múltiples (sección 7).
-- **Versiones anteriores del equipo:** 2 × 8,008 grupos de 16 petroleras sobre **este mismo periodo de train**.
+Todo se cuenta en la sección 7.
 
 ## 2. Datos (`data/`)
 
-- **Fuente:** Yahoo Finance (yfinance 1.7.0), cierre ajustado por dividendos y splits. Congelado en `data/raw/prices_raw.csv`.
-- **Ventana:** 2011-01-01 a 2025-12-31 (15 años, el máximo permitido). Da la muestra de train más larga posible y termina en un año cerrado. Resultan 3,772 días hábiles, de 2011-01-03 a 2025-12-31.
-- **Validación:** se aplica a toda la muestra, porque es limpieza y no estimación.
+- **Fuente:** Yahoo Finance (yfinance 1.7.0), cierre ajustado por dividendos y splits. Cada sector se congeló en `data/raw/<sector>.csv` con su `_meta.json`. El oro conserva su descarga original (renombrada a `data/raw/oro.csv`).
+- **Ventana:** 2011-01-01 a 2025-12-31, 15 años, el máximo permitido. Resultan 3,772 días hábiles (2011-01-03 a 2025-12-31).
+- **`data/processed/prices.csv`** trae los **73 candidatos**. El grupo elegido está en `selected_group.json`, y `data/processed/sectors.json` dice a qué sector pertenece cada ticker.
 
 | Caso | Encontrados | Regla de resolución |
 |---|---|---|
-| Valores faltantes | 0 (en los 9 activos) | La fecha se descarta para todos (no se rellena: rellenar inventa precios) |
-| Fechas duplicadas | 0 | Se conserva la primera aparición |
-| Fechas desalineadas entre activos | 0 | La fecha se descarta completa |
+| Ticker sin historia completa | 4 (BK, CMA, SNV, BZH) | Se excluye sin reemplazo |
+| Valores faltantes / fechas desalineadas | 0 / 0 | La fecha se descarta para todos (no se rellena) |
+| Fechas duplicadas | 0 | Se conserva la primera |
 | Precios no positivos | 0 | Se tratan como faltantes |
-| Saltos anómalos (\|log-retorno\| > 0.40) | 0 | Se marcan sin modificar; "posible error" si revierten más de la mitad al día siguiente. Los precios ya vienen ajustados por splits |
+| Saltos anómalos (\|log-retorno\| > 0.40) | 2 (MHO el 2020-03-18, FHN el 2023-05-04) | Se marcan sin modificar; ninguno revierte, así que no parecen error |
 
-- **Partición cronológica 60/20/20** (`data/processed/splits.json`):
+**Partición cronológica 60/20/20** (`data/processed/splits.json`):
 
 | Tramo | Inicio | Fin | Días |
 |---|---|---|---|
@@ -65,24 +86,24 @@ Otros sectores (bancos, tecnología, consumo) dependen de varios factores distin
 
 ## 3. Marco teórico
 
-**Eigenvalores y eigenvectores.** Un eigenvector de una matriz es un vector que, al transformarse con esa matriz, **no cambia de dirección, solo de escala**. El factor de escala es su eigenvalor. Johansen calcula eigenvalores y eigenvectores de una matriz construida con los datos, de forma parecida a PCA: reduce la dimensionalidad buscando las combinaciones de activos más estables. **Los eigenvectores indican cuánto invertir en cada activo.**
+**Eigenvalores y eigenvectores.** Un eigenvector de una matriz es un vector que, al transformarse con esa matriz, **no cambia de dirección, solo de escala**. El factor de escala es su eigenvalor. Johansen calcula eigenvalores y eigenvectores de una matriz construida con los datos, de forma parecida a PCA: busca las combinaciones de activos más estables. **Los eigenvectores dicen cuánto invertir en cada activo.**
 
-**Spread del portafolio.** S_t = βᵀ·P_t, con P_t el vector de **log-precios** de los n activos en t. β es el vector cuya combinación tiene **reversión a la media**.
+**Spread del portafolio.** S_t = βᵀ·P_t, con P_t el vector de **log-precios** de los n activos en t. β es el vector cuya combinación **revierte a la media**.
 
-**Pruebas múltiples.** Mientras más activos se prueban, mayor es la probabilidad de falsos positivos. Por eso los 9 candidatos vienen del mismo sector.
+**Pruebas múltiples.** Mientras más activos y grupos se prueban, mayor la probabilidad de falsos positivos. Por eso cada sector se limita a 8-12 empresas con razón económica, y todo se cuenta (sección 7).
 
 **Del VAR(p) al VECM.** Se parte de
 
 P_t = A_1·P_{t−1} + A_2·P_{t−2} + … + A_p·P_{t−p} + ε_t
 
-que se reescribe como modelo de corrección de error vectorial:
+y se reescribe como modelo de corrección de error vectorial:
 
-ΔP_t = Π·P_{t−1} + Σ_{i=1}^{p−1} Γ_i·ΔP_{t−i} + ε_t
+ΔP_t = Π·P_{t−1} + Σ_{i=1}^{p−1} Γ_i·ΔP_{t−i} + ε_t,   con Π = A_1 + … + A_p − I y Γ_i = −(A_{i+1} + … + A_p)
 
 - A_i es la matriz de coeficientes: el aporte de cada rezago de cada activo.
-- I es la matriz identidad.
-- p es cuántos niveles de autorregresión hay.
+- I es la matriz identidad; p es el número de rezagos del VAR.
 
+Los casos desarrollados:
 - **p = 1:** restando P_{t−1} de ambos lados, ΔP_t = (A_1 − I)·P_{t−1} + ε_t.
 - **p = 2:** ΔP_t = (A_1 − I)·P_{t−1} + A_2·P_{t−2} + ε_t. Como P_{t−2} = P_{t−1} − ΔP_{t−1}:
   ΔP_t = (A_1 + A_2 − I)·P_{t−1} − A_2·ΔP_{t−1} + ε_t.
@@ -90,278 +111,317 @@ que se reescribe como modelo de corrección de error vectorial:
   ΔP_t = (A_1 + A_2 + A_3 − I)·P_{t−1} − (A_2 + A_3)·ΔP_{t−1} − A_3·ΔP_{t−2} + ε_t.
   Es decir, Π = A_1 + A_2 + A_3 − I, Γ_1 = −(A_2 + A_3) y Γ_2 = −A_3.
 
-**Estimación.** Por **máxima verosimilitud**: se busca la combinación de parámetros que mejor explica los datos observados. La **prueba de razón de verosimilitud (LR)** determina r, el número de eigenvectores cointegrados. Hay dos versiones:
-- **Traza:** ¿hay más de r relaciones?
-- **Máximo eigenvalor:** ¿hay exactamente r + 1 relaciones contra r?
+**Estimación.** Por **máxima verosimilitud**: se busca la combinación de parámetros que mejor explica los datos observados. La **prueba de razón de verosimilitud (LR)** compara el modelo con r relaciones contra uno con más, y así determina r:
+- **Traza:** H0 "hay a lo más r relaciones" contra "hay más de r".
+- **Máximo eigenvalor:** H0 "hay r" contra "hay r + 1".
 
-**Condición de rango.** El rango de Π es el número r de combinaciones estacionarias, se escribe Π = αβᵀ, y las r columnas de β son los vectores de cointegración.
-- **r = 0 (alarma):** Π = 0, no hay ninguna combinación estacionaria. Los precios no están atados y el grupo no sirve para reversión a la media.
-- **r = n (alarma):** Π tiene rango completo, así que cada serie sería estacionaria por sí sola. No hay tendencia común que compartir, y casi siempre indica un problema de datos o de especificación.
-- **0 < r < n:** hay r relaciones de equilibrio y n − r tendencias comunes. Es el caso que se busca.
+**Condición de rango.** El rango de Π es el número r de combinaciones estacionarias, y se escribe Π = αβᵀ: las r columnas de β son los vectores de cointegración y α es la velocidad de ajuste.
+- **r̂ = 0 (alarma):** Π = 0, no hay ninguna combinación estacionaria. El grupo no sirve para reversión a la media.
+- **r̂ = n (alarma):** Π tiene rango completo, así que cada serie sería estacionaria por sí sola. No hay tendencia común; casi siempre es un problema de datos o de especificación.
+- **0 < r̂ < n:** hay r̂ relaciones de equilibrio y n − r̂ tendencias comunes. Es el caso que se busca.
 
-## 4. Embudo de selección (7 etapas, solo train, log-precios)
+## 4. Embudo de selección (7 etapas en cada sector, solo train, log-precios)
 
-Resultados por subgrupo en `artifacts/cointegration/group_selection.csv` (84 filas: etapa alcanzada, estadísticos, decisión y razón).
+Se guarda una fila por subgrupo en `artifacts/cointegration/group_selection.csv` (938 filas, con sector, etapa alcanzada, estadísticos, decisión y razón).
 
-**Etapa 1 (universo):** los 9 activos de la sección 1.
+**Etapa 1 (universo):** la sección 1. Todos los subgrupos de 6 activos de cada sector: C(n,6), es decir 84, 28 o 210 por sector, **938 en total**.
 
-**Etapa 2 (correlación móvil sobre retornos; heurística, no criterio definitivo):**
-- Log-retornos diarios, ventana de 63 días, 3 sub-ventanas de ~3 años.
-- Criterio: correlación media por pares > 0.70 en las tres.
-- **Ningún subgrupo llega a 0.70 con retornos diarios, en ninguno de los dos universos.** Máximo de la correlación mínima por sub-ventana: **0.647 en energía** y **0.652 en oro** (nem-aem-kgc-fnv-wpm-rgld). El umbral no se cambió.
-- **Regla de respaldo (contada: 1 vez):** como la correlación es una heurística y el criterio definitivo es Johansen, la etapa 3 prioriza los 84. **Esta regla se adoptó DESPUÉS de ver el fracaso y se declara como desviación.**
-- **Dato solo informativo, no sustituye el criterio** (el profesor pidió retornos): la correlación media por pares de los **log-precios en niveles** en train llega a **0.865** como máximo (media de los 84: 0.467). Sale mucho más alta porque dos series con tendencia se correlacionan aunque no tengan relación (columna `info_corr_log_levels`).
+**Etapa 2 (correlación móvil de log-retornos; heurística):** ventana de 63 días; el criterio es una correlación media por pares > 0.70 en las 3 sub-ventanas de ~3 años.
 
-**Etapa 3 (Engle-Granger por pares; prioriza, no elimina):** de 36 pares distintos solo pasa 1 (KGC-HMY, p = 0.0015). 35 subgrupos tienen 1 par que pasa y 49 tienen 0. Ningún subgrupo se eliminó.
+**Etapa 3 (Engle-Granger por pares, p < 0.05; prioriza, no elimina):** da el orden de evaluación. Son 299 pares, calculados una vez por sector.
 
-**Etapas 4 a 6 (regla secuencial, escrita antes):**
-- **30 subgrupos llegaron a Johansen:** 28 dieron r̂ = 0 (alarma), el nº 8 no tuvo columna operable, y **el nº 30 (NEM-KGC-GFI-HMY-FNV-RGLD) cumplió**.
-- Orden p: AIC = 1 y BIC = 1; se usa BIC.
-- Especificación: **constante sin restringir (caso 3), fuera de la relación de cointegración**. Valores críticos de **MacKinnon, Haug y Michelis (1996)**. Es consistente con el filtro 1 sin intercepto.
+**Etapas 4 a 6:** se aplican a **todos** los subgrupos que pasan la etapa 2. Si en un sector ninguno la pasa, se aplican a todos y se cuenta como respaldo.
+- Orden p del VAR por AIC y BIC (se usa BIC).
+- **Constante sin restringir (caso 3), fuera de la relación de cointegración.** Valores críticos de **MacKinnon, Haug y Michelis (1996)**.
+- r̂ con la traza al 95%; r̂ = 0 o r̂ = n se rechazan.
+- **Etapa 5:** spread de cada columna de β; se queda la de ADF más negativo con vida media operable.
+- **Etapa 6:** ADF p < 0.05 y vida media de 5 a 60 días.
 
-**Etapa 7 (estabilidad):**
-- 14 sub-ventanas de 504 días que avanzan 126.
-- Una sub-ventana es **estable** si el grupo sigue cointegrado (r̂ ≥ 1 por la traza) **y** el spread de la mejor columna dentro de r̂ pasa ADF (p < 0.05).
-- **La estabilidad entra como criterio de selección** (sección 4.8), no solo como dato.
+**Etapa 7 (estabilidad):** se repiten las etapas 4 a 6 en 14 sub-ventanas de 504 días que avanzan 126, para **todo** subgrupo que llega a Johansen. Una sub-ventana es estable si r̂ ≥ 1 por la traza **y** el spread de la mejor columna dentro de r̂ pasa ADF.
 
-### 4.8 Selección final del grupo (solo train)
+| Sector | Subgrupos | Pasan correlación (máx.) | Respaldo | Llegan a Johansen | r̂ = 0 | Cumplen 4-6 | Estabilidad máx. |
+|---|---|---|---|---|---|---|---|
+| Oro | 84 | 0 (0.652) | sí | 84 | 77 | 6 | 43% |
+| Bancos grandes | 84 | 47 (0.749) | no | 47 | 47 | 0 | 29% |
+| Bancos regionales | 28 | 27 (0.733) | no | 27 | 13 | 14 | 50% |
+| Aseguradoras | 210 | 0 (0.640) | sí | 210 | 207 | 2 | 64% |
+| **Eléctricas** | 210 | **210 (0.780)** | no | 210 | 165 | **44** | **86%** |
+| Petroleras integradas | 84 | 0 (0.697) | sí | 84 | 80 | 4 | 43% |
+| Semiconductores | 210 | 0 (0.658) | sí | 210 | 197 | 13 | 21% |
+| Constructoras | 28 | 1 (0.723) | no | 1 | 1 | 0 | 7% |
+| **Total** | **938** | 285 | 4 sectores | **873** | 787 | **83** | |
 
-**Diagnóstico de patas del grupo del embudo:**
+- No apareció ninguna alarma de r̂ = n.
+- **El respaldo de la etapa 2 se usó en 4 sectores** (oro, aseguradoras, petroleras y semiconductores): **contador de respaldos = 4**. Ninguno de esos sectores puede ganar, porque R1 exige pasar la correlación.
 
-| Pata | \|β\| normalizado | Participación en el nocional |
-|---|---|---|
-| FNV | 1.000 | 38.1% |
-| RGLD | 0.741 | 28.2% |
-| GFI | 0.474 | 18.1% |
-| NEM | 0.314 | 12.0% |
-| HMY | 0.057 | **2.2%** |
-| KGC | 0.041 | **1.6%** |
+### 4.8 Recorte de patas y selección final (solo train)
 
-**Umbral de peso económicamente relevante, fijado antes de ver más resultados: 5% del nocional** (|β_i| / Σ|β|).
-- Con 6 activos el peso igual sería 16.7%; menos de un tercio de eso no aporta exposición.
-- Con el 80% de $1,000,000, el 5% son $40,000. Con ese tamaño, la comisión de 0.125% por lado anula cualquier aporte de la pata.
-- **Quedan por debajo: HMY (2.2%) y KGC (1.6%).**
-- Un peso cercano a cero oscila alrededor del cero y cambia de signo por puro ruido. Eso explica los 7 cambios de signo que hacían fallar `test_beta_stability`.
-- El enunciado permite grupos de 2 a 8 activos, y el profesor anticipó que "puede que encontremos 6 pero solo 4 o 2 pasen". **Reducir el grupo a las patas relevantes no cambia ningún umbral.**
+**Recorte (preregistrado):** a cada subgrupo que cumple 4 a 6 se le quitan las patas con |β_i| / Σ|β| < **5% del nocional**, dejando al menos 3 activos, y el recorte se evalúa completo.
+- Con 6 activos, el peso igual sería 16.7%.
+- Con el 80% de $1,000,000, el 5% son $40,000, monto en el que la comisión anula el aporte de la pata.
+- El enunciado permite grupos de 2 a 8 activos.
 
-**Candidatos (4 en total):**
-- (a) el grupo del embudo;
-- (b) quitarle 1, 2 y 3 de sus patas de menor |β| (mínimo 3 activos);
-- (c) los subgrupos que llegaron a Johansen y cumplieron las etapas 5 y 6: solo fue el mismo grupo del embudo, así que no agrega ninguno nuevo.
+Se generaron **37 recortes**. Junto con los 873 subgrupos, se evaluaron completos **910 grupos**. Cada uno con Johansen, columnas, estabilidad y, si tiene vector válido, el filtro 1 con la rejilla fina de q (141 valores, más una ultrafina cuando hay q válidos sin meseta).
 
-**Regla de selección, escrita antes de mirar la tabla:**
-1. **Filtro obligatorio:**
-   - r̂ ≥ 1 con la traza **y** con el máximo eigenvalor al 95%;
-   - ADF del spread con p < 0.05;
-   - vida media entre 5 y 60 días;
-   - existe un q que cumple los criterios (a)-(d) del filtro 1, con **cero** cambios de signo.
-2. Entre los elegibles: mayor fracción de sub-ventanas estables.
-3. Desempate: ADF más negativo.
-4. Segundo desempate: más activos.
-5. Si ninguno es elegible, no se relaja nada.
+**Regla de selección (preregistrada en `data/universe.json` antes de ver datos):** un grupo es **elegible** si cumple los siete requisitos.
 
-**Tabla de candidatos (train, `artifacts/cointegration/candidatos_final.csv`):**
+| | Requisito |
+|---|---|
+| R1 | Correlación media por pares de retornos > 0.7 en las 3 sub-ventanas |
+| R2 | r̂ ≥ 1 (y < n) por la traza **y** por el máximo eigenvalor al 95% |
+| R3 | ADF del spread de Johansen p < 0.05 |
+| R4 | Vida media de 5 a 60 días |
+| R5 | Existe meseta de q (≥ 5 q válidos contiguos en la rejilla fina) con cero cambios de signo |
+| R6 | ADF del spread de Kalman p < 0.05 en el q elegido |
+| R7 | Estabilidad ≥ 50% de las sub-ventanas |
 
-| | **6: NEM-KGC-GFI-HMY-FNV-RGLD** | **5: NEM-GFI-HMY-FNV-RGLD** | **4: NEM-GFI-FNV-RGLD** | **3: GFI-FNV-RGLD** |
-|---|---|---|---|---|
-| Origen | Grupo del embudo | Quitar KGC | Quitar KGC y HMY | Quitar KGC, HMY y NEM |
-| p (AIC / BIC) | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 |
-| r̂ traza / máx. eig. (¿coinciden?) | 1 / 1 (sí) | 1 / 1 (sí) | 1 / 1 (sí) | **0** / 1 (**no**) |
-| Traza r=0 (VC 95%) | 99.75 (95.75) | 84.44 (69.82) | 49.92 (47.85) | 29.43 (29.80) |
-| Máx. eig. r=0 (VC 95%) | 45.96 (40.08) | 43.89 (33.88) | 34.75 (27.59) | 22.00 (21.13) |
-| Eigenvalores | 0.0201, 0.0100, 0.0068, 0.0046, 0.0022, 0.0001 | 0.0192, 0.0098, 0.0058, 0.0022, 0.0000 | 0.0152, 0.0036, 0.0029, 0.0002 | 0.0097, 0.0032, 0.0001 |
-| ADF por columna | −3.53, −2.64, −3.33, −2.91, −1.92, −2.89 | −3.53, −2.68, −2.13, −2.01, −2.52 | −3.47, −2.35, −2.22, −2.32 | −2.98, −2.44, −2.25 |
-| Vida media por columna (días) | 58.5, 113.5, 84.1, 99.7, 204.9, 183.7 | 58.2, 112.6, 144.4, 190.9, 247.6 | 57.9, 180.2, 167.0, 330.5 | 77.0, 173.9, 370.5 |
-| Columna elegida | 0 | 0 | 0 | ninguna |
-| ADF del spread (p) | −3.530 (0.0072) | −3.529 (0.0073) | −3.467 (0.0089) | – |
-| Vida media | 58.5 | 58.2 | 57.9 | – |
-| Estabilidad (sub-ventanas) | 2/14 (14%) | 0/14 (0%) | **3/14 (21%)** | 1/14 (7%) |
-| Pata de normalización | FNV | FNV | FNV | – |
-| \|β\| | FNV 1, RGLD 0.741, GFI 0.475, NEM 0.314, HMY 0.057, KGC 0.041 | FNV 1, RGLD 0.736, GFI 0.491, NEM 0.308, HMY 0.031 | FNV 1, RGLD 0.577, GFI 0.512, NEM 0.411 | – |
-| q que cumplen (a)-(d) / 29 | 0 (mín. 4 cambios de signo) | 0 (el único q sin cambios reprueba el ADF) | **2** | – |
-| Cambios de signo con el q elegido | – | – | **0** (NEM 0, GFI 0, RGLD 0) | – |
-| Burn-in / piso de P | – | – | 908 días / 1.8·10⁻⁴ a 4.6·10⁻⁴ | – |
-| **Elegible** | no: sin q con cero cambios | no: sin q con cero cambios | **sí** | no: r̂ traza = 0 |
+- **Orden entre elegibles:** mayor estabilidad, luego ADF más negativo, luego menor burn-in (% de train), luego más activos.
+- **Si no hubiera ninguno elegible:** no se baja nada. Se ordena por número de requisitos cumplidos y se declara qué falla.
+- **R3 y R4** se miden en la columna elegida. Si no hay, se miden en la de ADF más negativo dentro de r̂, solo para contar.
 
-**Ganador: NEM, GFI, FNV, RGLD (4 activos)**, el **único elegible**. Además es el más estable de los cuatro (21%).
+**Cuántos cumplen cada requisito (de 910):** R1 311, R2 76, R3 902, R4 716, **R5 29**, R6 35, **R7 77**. Los cuellos de botella son la meseta de q y la estabilidad.
+
+**Requisitos cumplidos (de 910):** 7/7: **4** · 6/7: 19 · 5/7: 18 · 4/7: 82 · 3/7: 210 · ≤ 2/7: 577.
+
+**Los 12 primeros (tabla completa en `artifacts/cointegration/candidatos_final.csv`):**
+
+| # | Grupo | R1 | R2 | R3 | R4 | R5 | R6 | R7 | Cumple | Estabilidad | ADF | Burn-in |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **1** | **DUK-XEL-ED-ES-CMS-AEE** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | **7** | **79%** | −6.08 | 37% |
+| 2 | XEL-ED-ES-CMS-AEE (recorte) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 7 | 71% | −6.36 | 35% |
+| 3 | XEL-ED-ES-CMS-DTE-AEE | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 7 | 57% | −5.74 | 33% |
+| 4 | SO-AEP-XEL-WEC-ES-AEE | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 7 | 50% | −5.34 | 33% |
+| 5 | SO-XEL-WEC-ES-CMS-AEE | ✓ | ✓ | ✓ | ✓ | ✗ (4) | ✓ | ✓ | 6 | 64% | −5.54 | 42% |
+| 6 | AEP-XEL-ED-WEC-ES-CMS | ✓ | ✗ (máx. eig. 0) | ✓ | ✓ | ✓ | ✓ | ✓ | 6 | 64% | −5.47 | 30% |
+| 7 | DUK-AEP-XEL-ED-ES-AEE | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | 6 | 43% | −5.88 | 38% |
+| 8 | DUK-XEL-ED-WEC-ES-AEE | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | 6 | 43% | −5.75 | 36% |
+| 9 | SO-AEP-XEL-ED-WEC-ES | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | 6 | 43% | −5.52 | 22% |
+| 10 | AEP-XEL-ED-ES (recorte) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | 6 | 43% | −5.42 | 23% |
+| 11 | SO-XEL-WEC-ES-AEE (recorte) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | 6 | 43% | −5.18 | 42% |
+| 12 | AEP-XEL-ED-WEC-ES-AEE | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | 6 | 36% | −6.12 | 36% |
+
+**Mejor grupo de cada sector:**
+
+| Sector | Mejor grupo | Cumple | Qué falla |
+|---|---|---|---|
+| Eléctricas | DUK-XEL-ED-ES-CMS-AEE | 7 | — |
+| Bancos regionales | KEY-FITB-HBAN-TFC (recorte) | 6 | R7 (29%) |
+| Oro | NEM-GFI-FNV-RGLD (ganador de v4) | 4 | R1 (0.587), R5 (racha de 4), R7 (21%) |
+| Petroleras integradas | BP-SHEL-E-EQNR-SU-IMO | 3 | R1 (0.640), R5, R6 (sin q válido), R7 (36%) |
+| Bancos grandes | JPM-BAC-WFC-USB-PNC-MS | 3 | R2 (r̂ = 0), R5, R6, R7 (29%) |
+| Semiconductores | AMAT-KLAC-MCHP-QCOM (recorte) | 3 | R1 (0.518), R5, R6, R7 (21%) |
+| Aseguradoras | ALL-PGR-HIG-CINF-L-AFG | 3 | R1 (0.573), R5, R6, R7 (14%) |
+| Constructoras | DHI-LEN-PHM-TOL-KBH-MTH | 3 | R2 (r̂ = 0), R5, R6, R7 (7%) |
+
+**Ganador: DUK, XEL, ED, ES, CMS y AEE (6 activos).** Es uno de los 4 elegibles y el de mayor estabilidad (79%).
+- Llegó desde el lugar 143 de 210 en la prioridad de Engle-Granger: un solo par de 15 pasa EG. Eso muestra que EG solo ordena y que la regla anterior, que se detenía en el primero que cumplía, habría dejado mejores grupos sin probar.
+- **Nota sobre CMS:** pesa **4.7% del nocional**, debajo del 5%. La regla no excluye grupos por eso. Su recorte (DUK-XEL-ED-ES-AEE) se evaluó completo y **baja a 29% de estabilidad (no cumple R7)**: la pata pequeña sí aporta estabilidad.
+- El segundo elegible (XEL-ED-ES-CMS-AEE) tiene todas sus patas arriba del 10%, pero menor estabilidad (71%). Se reporta como alternativa; la regla no se cambió.
 
 ### 4.9 Grupo ganador: Johansen, vector y spread (train)
 
-- p = 1 (AIC y BIC); constante sin restringir; valores críticos de MacKinnon, Haug y Michelis.
+- p = 1 (AIC = BIC = 1); constante sin restringir; valores críticos de MacKinnon, Haug y Michelis.
 
 | Hipótesis | Traza | VC 95% | VC 99% | Máx. eigenvalor | VC 95% | VC 99% |
 |---|---|---|---|---|---|---|
-| r = 0 | **49.92** | 47.85 | 54.68 | **34.75** | 27.59 | 32.72 |
-| r ≤ 1 | 15.17 | 29.80 | – | 8.09 | 21.13 | – |
-| r ≤ 2 | 7.08 | 15.49 | – | 6.63 | 14.26 | – |
-| r ≤ 3 | 0.45 | 3.84 | – | 0.45 | 3.84 | – |
+| r = 0 | **101.56** | 95.75 | 104.96 | **51.57** | 40.08 | 45.87 |
+| r ≤ 1 | 49.99 | 69.82 | 77.82 | 26.51 | 33.88 | 39.37 |
+| r ≤ 2 | 23.48 | 47.85 | 54.68 | 11.41 | 27.59 | 32.72 |
+| r ≤ 3 | 12.07 | 29.80 | 35.46 | 8.86 | 21.13 | 25.87 |
+| r ≤ 4 | 3.22 | 15.49 | 19.93 | 2.87 | 14.26 | 18.52 |
+| r ≤ 5 | 0.35 | 3.84 | 6.63 | 0.35 | 3.84 | 6.63 |
 
-- **r̂ = 1, con las dos pruebas de acuerdo.** No hay alarma (ni 0 ni n).
-- La traza pasa al 95% pero **no al 99%**; el máximo eigenvalor sí pasa al 99%.
-- Eigenvalores: 0.01525, 0.00357, 0.00293, 0.00020.
-- **Etapa 5:** columna 0 (ADF −3.467, p = 0.0089, vida media 57.9). Las demás no son operables (p ≥ 0.15).
-- **Normalización:** la pata de mayor |β| es **FNV** (+1).
+- **r̂ = 1, con las dos pruebas de acuerdo**, y sin alarma (ni 0 ni n).
+- La traza pasa al 95% (+6% sobre el valor crítico) pero **no al 99%**. El máximo eigenvalor sí pasa al 99% (+12%).
+- **Eigenvalores:** 0.02254, 0.01165, 0.00503, 0.00391, 0.00127, 0.00015.
+- **Correlación de retornos por sub-ventana:** 0.742, 0.840 y 0.838. La de log-precios en niveles es 0.983, solo como dato informativo.
+- **Etapa 5:** columna 0 (ADF −6.08, vida media 15.3). Las demás tienen ADF de −1.3 a −3.0 y vidas medias de 56 a 375 días.
+- **Normalización:** la pata de mayor |β| es **XEL** (+1).
 
-| | NEM | GFI | FNV | RGLD |
-|---|---|---|---|---|
-| β (train) | −0.411 | +0.512 | **+1** | −0.577 |
-| Participación en el nocional | 16.4% | 20.5% | 40.0% | 23.1% |
+| | DUK | XEL | ED | ES | CMS | AEE |
+|---|---|---|---|---|---|---|
+| β (train) | +0.186 | **+1** | −0.484 | −0.658 | +0.131 | −0.321 |
+| \|β\| | 0.186 | 1.000 | 0.484 | 0.658 | 0.131 | 0.321 |
+| Participación en el nocional | 6.7% | 36.0% | 17.4% | 23.7% | **4.7%** | 11.5% |
 
-Todas las patas superan el 5%.
-
-- **Convención de signo:** largo el spread = comprar FNV y GFI (β > 0) y vender RGLD y NEM (β < 0), en proporción a |β|. Corto el spread invierte todos los signos.
-- **Etapa 6:** ADF p = **0.0089** < 0.05; vida media **57.9 días**, dentro de 5-60 pero cerca del límite.
-- **Etapa 7:** estable en **3 de 14 sub-ventanas (21%)**.
+- **Convención de signo:** largo el spread = comprar XEL, DUK y CMS (β > 0) y vender ES, ED y AEE (β < 0), en proporción a |β|. Corto el spread invierte todos los signos.
+- **Etapa 6:** ADF −6.08, **p = 1.1·10⁻⁷**; vida media de **15.3 días**.
+- **Etapa 7:** **estable en 11 de 14 sub-ventanas (79%)**.
 
 | Sub-ventana | r̂ | ADF p | Vida media | Estable |
 |---|---|---|---|---|
-| 2011-01 a 2013-01 | 1 | 0.0018 | 11.2 | sí |
-| 2011-07 a 2013-07 | 0 | 0.0143 | 14.9 | no |
-| 2012-01 a 2014-01 | 0 | 0.0484 | 18.3 | no |
-| 2012-07 a 2014-07 | 0 | 0.0148 | 16.0 | no |
-| 2013-01 a 2015-01 | 2 | 0.0237 | 18.2 | sí |
-| 2013-07 a 2015-07 | 1 | 0.0099 | 13.1 | sí |
-| 2014-01 a 2016-01 | 0 | 0.0564 | 15.7 | no |
-| 2014-07 a 2016-07 | 1 | 0.6492 | 41.7 | no |
-| 2015-01 a 2017-01 | 0 | 0.1222 | 28.8 | no |
-| 2015-07 a 2017-07 | 0 | 0.0948 | 22.4 | no |
-| 2016-01 a 2018-01 | 0 | 0.0002 | 29.2 | no |
-| 2016-07 a 2018-07 | 0 | 0.0037 | 10.1 | no |
-| 2017-01 a 2019-01 | 0 | 0.0005 | 8.8 | no |
-| 2017-07 a 2019-07 | 0 | 0.0003 | 9.3 | no |
+| 2011-01 a 2013-01 | 2 | 5.6e-5 | 7.5 | sí |
+| 2011-07 a 2013-07 | 1 | 6.2e-6 | 5.6 | sí |
+| 2012-01 a 2014-01 | 1 | 7.5e-7 | 4.1 | sí |
+| 2012-07 a 2014-07 | 1 | 9.5e-8 | 4.5 | sí |
+| 2013-01 a 2015-01 | 1 | 0.0027 | 8.0 | sí |
+| 2013-07 a 2015-07 | 1 | 1.2e-6 | 5.5 | sí |
+| 2014-01 a 2016-01 | 1 | 2.0e-9 | 3.7 | sí |
+| 2014-07 a 2016-07 | 1 | 2.8e-10 | 3.4 | sí |
+| 2015-01 a 2017-01 | 1 | 1.0e-4 | 2.9 | sí |
+| 2015-07 a 2017-07 | 0 | 0.0012 | 23.2 | no |
+| 2016-01 a 2018-01 | 1 | 0.027 | 6.3 | sí |
+| 2016-07 a 2018-07 | 1 | 3.6e-5 | 6.8 | sí |
+| 2017-01 a 2019-01 | 0 | 2.2e-5 | 7.0 | no |
+| 2017-07 a 2019-07 | 0 | 2.3e-5 | 6.9 | no |
 
-**Pérdida de cointegración fuera de muestra.** Si la cointegración se pierde fuera de la muestra, la estrategia pierde sentido. Aquí estamos **minimizando el error dentro de la muestra (train)**, y una ruptura posterior es posible. Con un 21% de sub-ventanas estables, y ninguna después de 2015, es probable. Se documenta en vez de esconderse.
+Las 3 sub-ventanas inestables están al final de train (r̂ = 0 por la traza, aunque el spread siga pasando ADF). Además, las vidas medias en ventanas de 2 años son más cortas (3 a 8 días) que en todo train (15.3): el vector de cada ventana se ajusta mejor dentro de su muestra.
+
+**Pérdida de cointegración fuera de muestra.** Si la cointegración se pierde fuera de la muestra, la estrategia pierde sentido. Aquí se **minimiza el error dentro de la muestra (train)**. Que las sub-ventanas inestables estén al final de train es una señal de alerta de ruptura posterior. Se documenta en vez de esconderse.
 
 ## 5. Filtro de Kalman 1 (`kalman/filter1_weights.py`)
 
 ### 5.1 Modelo (notación del profesor)
 
-- **Estado:** z_t = β_t, los pesos de NEM, GFI y RGLD frente a FNV. **Sin intercepto α.**
-- **Transición:** z_t = A·z_{t−1} + W_t, W_t ~ N(0, Q), con **A = I**. Q es la velocidad del drift.
+- **Estado:** z_t = β_t, los pesos de DUK, ED, ES, CMS y AEE frente a XEL. **Sin intercepto α.**
+- **Transición:** z_t = A·z_{t−1} + W_t, W_t ~ N(0, Q), con **A = I** explícita. Q es la velocidad del drift de los pesos.
 - **Observación:** y_t = C_t·z_t + V_t, V_t ~ N(0, R).
-  - y_t = log P_FNV − μ_FNV; C_t = (log P_i − μ_i) de NEM, GFI y RGLD.
-  - μ = media de train de cada log-precio: el término determinístico, consistente con Johansen.
+  - y_t = log P_XEL − μ_XEL; C_t = (log P_i − μ_i) de las otras cinco.
+  - μ = media de train de cada log-precio: es el término determinístico, consistente con Johansen caso 3.
 - **Predecir:** ẑ_{t|t−1} = A·ẑ_{t−1|t−1}; P_{t|t−1} = A·P_{t−1|t−1}·Aᵀ + Q.
 - **Actualizar:** ỹ_t = y_t − C_t·ẑ_{t|t−1}; S_t = C_t·P_{t|t−1}·C_tᵀ + R; K_t = P_{t|t−1}·C_tᵀ·S_t⁻¹; ẑ_{t|t} = ẑ_{t|t−1} + K_t·ỹ_t; P_{t|t} = (I − K_t·C_t)·P_{t|t−1}.
-- **Pesos β̂_t:** +1 en FNV y −ẑ_{t|t−1} en las demás.
-- **Spread** (sin look-ahead): β̂_tᵀ(P_t − μ) = ỹ_t.
+- **Pesos β̂_t:** +1 en XEL y −ẑ_{t|t−1} en las demás.
+- **Spread** (sin look-ahead, con los pesos previos): β̂_tᵀ(P_t − μ) = ỹ_t.
 
 **Aclaración sobre la regla de no mirar test ni valid:**
-- El filtro se **corre** hacia adelante sobre toda la muestra con los parámetros **congelados en train**, porque Arturo y Paula necesitan esas series. Lo mismo vale para el eigenvector móvil (solo datos pasados en cada fecha) y para las figuras con fronteras de tramos.
-- **Nada se estima, calibra ni elige mirando test o valid**, y ninguna cifra de esos tramos se usa para decidir en este bloque.
-- Eso **no es look-ahead**.
+- El filtro se **corre** hacia adelante sobre toda la muestra con parámetros **congelados en train**, porque Arturo y Paula necesitan esas series. Lo mismo vale para el eigenvector móvil (solo datos pasados en cada fecha).
+- **Nada se estima, calibra ni elige con test o valid**, y ninguna cifra de esos tramos se usó para decidir.
+- **Eso no es look-ahead.**
 
 ### 5.2 Selección de Q y R (train)
 
-- **R** = varianza residual de la regresión OLS estática de y sobre C (sin constante, log-precios centrados): **R = 0.01456**, o sea √R = 0.121. Equivale a un ruido de alrededor del **12% en el log-precio de FNV** no explicado por la canasta. R absorbe la desviación persistente del spread y por eso el filtro no la persigue.
-- **Q** = q · Q_base, con Q_base = R · diag(1/E[C_i²]).
-- **No se usó máxima verosimilitud libre:** elige Q demasiado grande y se come la reversión.
-- **Rejilla:** 29 valores de q, de 10⁻⁸ a 10⁻¹ (4 por década).
-- **Criterio, escrito antes:** (a) ADF p < 0.05; (b) vida media de 5 a 60 días; (c) **cero** cambios de signo; (d) pesos que se adaptan (al final de train difieren al menos 0.05 de los de Q = 0); centro de la meseta.
+- **R** = varianza residual de la regresión OLS estática de y sobre C (sin constante, log-precios centrados): **R = 2.81·10⁻⁴** (√R = 0.0168). Es un ruido de alrededor de **1.7% en el log-precio de XEL** que la canasta no explica.
+- **Q** = q·Q_base, con Q_base = R·diag(1/E[C_i²]): por unidad de q, cada componente aporta lo mismo a la varianza de la predicción.
+- **No se usó máxima verosimilitud libre:** elige un Q demasiado grande, los pesos persiguen cada desviación y el filtro se come la reversión.
+- **Criterio, escrito antes:**
+  - (a) ADF del spread de Kalman p < 0.05;
+  - (b) vida media de 5 a 60 días;
+  - (c) **cero** cambios de signo en train, después del burn-in;
+  - (d) los pesos se adaptan: al final de train difieren al menos 0.05 de los de Q = 0.
 
-| q | Q/R | Burn-in | ADF | ADF p | Vida media | Cambios de signo | Adaptación | var(ỹ/√S) | Autocorr. | Cumple |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 1.0e-8 | 8.8e-8 | 399 | −3.12 | 0.025 | 61.8 | 1 | 0.001 | 1.17 | 0.988 | no (b, c, d) |
-| 1.0e-7 | 8.8e-7 | 417 | −3.10 | 0.027 | 62.0 | 1 | 0.008 | 1.17 | 0.988 | no (b, c, d) |
-| 5.6e-7 | 4.9e-6 | 791 | −2.90 | 0.046 | 62.0 | 1 | 0.038 | 1.23 | 0.989 | no (b, c, d) |
-| **1.0e-6** | **8.8e-6** | **908** | **−2.88** | **0.048** | **55.5** | **0** | **0.060** | **1.07** | **0.987** | **sí (elegido)** |
-| 1.8e-6 | 1.6e-5 | 977 | −2.77 | 0.063 | 56.0 | 0 | 0.090 | 1.01 | 0.987 | no (a) |
-| 3.2e-6 | 2.8e-5 | 841 | −3.08 | 0.028 | 52.4 | 0 | 0.127 | 0.93 | 0.987 | sí |
-| 5.6e-6 | 4.9e-5 | 413 | −3.54 | 0.007 | 50.6 | 1 | 0.168 | 0.87 | 0.986 | no (c) |
-| 1.0e-4 | 8.8e-4 | 320 | −3.83 | 0.003 | 28.3 | 2 | 0.272 | 0.45 | 0.976 | no (c) |
-| 1.0e-3 | 8.8e-3 | 195 | −6.19 | 6e-8 | 10.4 | 10 | 0.262 | 0.20 | 0.936 | no (c) |
-| 1.0e-2 | 8.8e-2 | 49 | −11.4 | 1e-20 | 3.6 | 40 | 0.331 | 0.07 | 0.829 | no (b, c) |
-| 1.0e-1 | 0.88 | 44 | −13.8 | 8e-26 | 1.3 | 54 | 0.385 | 0.02 | 0.614 | no (b, c) |
+**Fase A: buscar la meseta.**
+- La rejilla de v4 tenía 29 valores (4 por década). Ahora es **fina: 141 valores de 10⁻⁸ a 10⁻¹ (20 por década)**.
+- **Meseta** (definida de antemano) = ≥ 5 q válidos **contiguos**: q puede moverse ±26% alrededor del centro sin salir de la región válida.
+- Si hay q válidos sin meseta, se refina a 100 por década para concluir.
 
-(La tabla completa, con los 29 valores, está en `artifacts/kalman/filter1_q_grid.csv`.)
+| Grupo (train) | Configuraciones | q válidos | Racha contigua más larga | ¿Meseta? |
+|---|---|---|---|---|
+| NEM-GFI-FNV-RGLD (oro, v4) | 141 finas + 61 ultrafinas | 5 finas; 28 ultrafinas | **4** finas (2.2·10⁻⁶ a 3.2·10⁻⁶); 19 ultrafinas (0.18 décadas) | **No**: le falta 1 punto; los demás q válidos son aislados (p del ADF oscila alrededor de 0.05) |
+| **DUK-XEL-ED-ES-CMS-AEE (ganador)** | **141** | **25** | **15** (5.0·10⁻⁶ a 2.5·10⁻⁵, 0.7 décadas) | **Sí** |
 
-- **Cumplen 2 de 29:** q = 1.0·10⁻⁶ y q = 3.2·10⁻⁶.
-- **No son contiguos** (el q intermedio, 1.8·10⁻⁶, reprueba el ADF con p = 0.063), así que **no hay una meseta**: hay dos rachas de largo 1, y la regla toma la primera. **q = 1.0·10⁻⁶** (Q/R = 8.8·10⁻⁶).
-- No queda en la orilla de la rejilla.
-- **Cero cambios de signo** (NEM 0, GFI 0, RGLD 0).
-- **El ADF del spread con ese q es p = 0.0476: pasa, pero muy cerca del umbral.**
-- **Diagonal de Q:** NEM 1.42·10⁻⁷; GFI 5.71·10⁻⁸; RGLD 1.83·10⁻⁷.
+**Detalle de la meseta del ganador** (`artifacts/kalman/filter1_q_grid.csv`; figura `fig_rejilla_q.png`):
+
+| q | Burn-in (días) | ADF p (Kalman) | Vida media | Adaptación | Cambios de signo |
+|---|---|---|---|---|---|
+| 5.0·10⁻⁶ (inicio de la meseta) | 828 | 0.020 | 22.6 | 0.128 | 0 |
+| 6.3·10⁻⁶ | 860 | 0.04999993 (justo debajo) | 22.3 | 0.142 | 0 |
+| 1.0·10⁻⁵ | 852 | 0.039 | 20.8 | 0.172 | 0 |
+| **1.12·10⁻⁵ (centro, elegido)** | **840** | **0.0136** | **20.4** | **0.179** | **0** |
+| 1.6·10⁻⁵ | 876 | 0.011 | 19.4 | 0.202 | 0 |
+| 2.5·10⁻⁵ (fin de la meseta) | 941 | 0.030 | 17.3 | 0.232 | 0 |
+| 2.8·10⁻⁵ (fuera) | 945 | 0.028 | – | – | **2** |
+
+- **Cumplen 25 de 141** en dos regiones: 7.1·10⁻⁷ a 2.0·10⁻⁶ (10 puntos) y 5.0·10⁻⁶ a 2.5·10⁻⁵ (15 puntos).
+- La racha más larga tiene 15 puntos ≥ 5, así que **hay meseta**. **q = 1.12·10⁻⁵ es su centro**, no está en la orilla de la rejilla y Q/R = 1.14·10⁻⁴.
+- Si el punto de p = 0.0500 cayera del otro lado, la meseta seguiría existiendo: quedaría una racha de 12.
+- Justo arriba de la meseta aparecen cambios de signo (2 en q = 2.8·10⁻⁵ y 4 en 3.2·10⁻⁵: falla el criterio c). Entre las dos regiones, de 2.2·10⁻⁶ a 4.5·10⁻⁶, el ADF da p de 0.052 a 0.065 (falla el criterio a).
+- **Cero cambios de signo** (DUK 0, ED 0, ES 0, CMS 0, AEE 0).
+- **Diagonal de Q:** DUK 5.15·10⁻⁸; ED 4.37·10⁻⁸; ES 2.86·10⁻⁸; CMS 1.70·10⁻⁸; AEE 1.98·10⁻⁸.
 - **No hubo respaldos en q** (contador: 0).
 
 ### 5.3 Inicialización, burn-in y convergencia (train)
 
-- **P₀ = 10⁴·I** (difuso: los |β| normalizados son ≤ 1). **ẑ₀** = β de Johansen de train.
-- **Burn-in medido = 908 días (hasta 2014-08-13): el 40.1% de train.** Es consecuencia de un q pequeño: con Q chico, P tarda mucho en llegar a su banda y quedarse ahí.
+- **P₀ = 10⁴·I** (difuso: los |β| normalizados son ≤ 1). **ẑ₀** = −β de Johansen de train para las 5 patas libres.
+- **Burn-in medido = 840 días (hasta 2014-05-07): el 37.1% de train.**
+  - Definición: primer día desde el cual la varianza posterior de todos los componentes se queda bajo el techo de su banda estable, exp(mediana ± 3·MAD) del log de P en train, hasta el final de train.
 - **Convergencia:** P_t baja de 10⁴ y se estabiliza.
-  - **Piso** (mediana después del burn-in): NEM 4.6·10⁻⁴; GFI 1.8·10⁻⁴; RGLD 3.5·10⁻⁴. Mínimo en train: 1.3·10⁻⁴.
-  - Con Q > 0, P converge a un piso **mayor que cero**, porque el modelo supone que los pesos verdaderos sí se mueven.
-  - Solo con Q = 0 llegaría a cero, y el filtro dejaría de aprender.
-- **Robustez a P₀** (10², 10⁴ y 10⁶·I): el burn-in es el mismo (908 días) y los pesos difieren como máximo **3.9·10⁻⁶** después del burn-in. **No depende de P₀.**
-- **Innovaciones** (train, después del burn-in): var(ỹ/√S) = 1.07 y autocorrelación de orden 1 = 0.987. En el filtro 1 el spread es la innovación: esa autocorrelación es la reversión lenta (55.5 días) que se opera.
+  - **Piso** (mediana después del burn-in): DUK 1.6·10⁻⁴; ED 1.1·10⁻⁴; ES 4.2·10⁻⁴; CMS 2.3·10⁻⁴; AEE 1.3·10⁻⁴. Mínimo en train: 9.7·10⁻⁵.
+  - **Con Q > 0, P converge a un piso mayor que cero**: cada día Q le suma incertidumbre (los pesos verdaderos sí se mueven) y la observación se la quita. El piso es donde las dos cosas se equilibran. Solo con Q = 0 llegaría a cero, y el filtro dejaría de aprender.
+- **Robustez a P₀** (10², 10⁴ y 10⁶·I):
+  - el burn-in es el mismo (840 días);
+  - después del burn-in, los pesos difieren como máximo **8.3·10⁻⁶** y el spread **4.8·10⁻⁷**.
+  - **No depende de P₀.**
+- **Innovaciones** (train, después del burn-in): var(ỹ/√S) = 0.79 y autocorrelación de orden 1 = 0.967 (Ljung-Box p ≈ 0).
+  - En el filtro 1 la innovación **es el spread**, y esa autocorrelación es la reversión lenta (20.4 días) que se opera. Por eso no es blanca, y no debe serlo.
+  - La prueba de innovaciones blancas del enunciado aplica al filtro 2 (Arturo).
+
+**Signo de CMS (importante para Arturo y Paula):**
+- Con el β de Johansen, CMS vale +0.131. Con el filtro, después del burn-in, vale **alrededor de −0.29 en todo train**, sin cambiar de signo.
+- El filtro reestima la relación desde el inicio (P₀ difuso) y, para una pata tan pequeña, el signo no está bien identificado.
+- **Las posiciones deben usar β̂_t de `beta_t.csv`**, no el β estático.
 
 ### 5.4 Ganancia de Kalman: cálculo e interpretación
 
 K_t = P_{t|t−1}·C_tᵀ·S_t⁻¹ es cuánto se mueve cada peso por cada unidad de sorpresa ỹ_t.
-- Después del burn-in, |K| es del orden de 0.001 a 0.02 (figura de diagnóstico, escala lineal; puede ser negativa).
-- **Ejemplo:** el 2014-08-13, ỹ = −0.0824 y K_NEM = −0.0198, así que ẑ_NEM sube (−0.0198)(−0.0824) = +0.0016, de 0.3303 a 0.3319.
-- Con un Q tan chico, los pesos se mueven muy despacio y conservan la reversión.
+- Durante el burn-in, |K| llega a cientos (P es enorme y el filtro aprende rápido).
+- Después, |K| baja al orden de 0.01 a 0.05 (figura de diagnóstico, escala **lineal**; K puede ser negativa).
+- **Ejemplo:** el 2014-05-07, ỹ = 0.006393 y K_DUK = 0.052597, así que ẑ_DUK cambia (0.052597)(0.006393) = +0.000336, de −0.204080 a −0.203744.
+- Con un Q chico, los pesos se mueven despacio y conservan la reversión.
 
 ### 5.5 Ejemplo numérico de 5 periodos (train, primeros días después del burn-in)
 
-Recalculado a mano con la P completa. **Diferencia máxima contra el código: 0.**
+Recalculado a mano con numpy, escribiendo las ecuaciones sin llamar a `kalman_filter`, y comparado con `beta_t.csv`, `spread_t.csv`, `gain_1.csv` y `posvar_1.csv`. **Diferencia máxima: 0.**
 
-Datos: μ = (NEM 3.27730, GFI 1.38020, FNV 3.90013, RGLD 4.10620); R = 0.014555; Q = diag(1.424·10⁻⁷, 5.707·10⁻⁸, 1.834·10⁻⁷); ẑ₀ = (0.4107, −0.5115, 0.5770).
+**Datos:**
+- μ = (DUK 3.84447, XEL 3.23122, ED 3.79245, ES 3.51149, CMS 3.19387, AEE 3.44647);
+- R = 2.80817·10⁻⁴;
+- Q = diag(5.148, 4.375, 2.856, 1.702, 1.982)·10⁻⁸ (DUK, ED, ES, CMS, AEE).
 
 y_t y C_t (log-precios centrados):
 
-| Fecha | y_t (FNV) | NEM | GFI | RGLD |
-|---|---|---|---|---|
-| 2014-08-13 | 0.073007 | −0.234993 | −0.241050 | 0.156993 |
-| 2014-08-14 | 0.026432 | −0.235732 | −0.233899 | 0.131830 |
-| 2014-08-15 | 0.028324 | −0.241664 | −0.245846 | 0.114781 |
-| 2014-08-18 | 0.033977 | −0.244271 | −0.238661 | 0.123216 |
-| 2014-08-19 | 0.029011 | −0.243898 | −0.257938 | 0.120329 |
+| Fecha | y_t (XEL) | DUK | ED | ES | CMS | AEE |
+|---|---|---|---|---|---|---|
+| 2014-05-07 | −0.174159 | −0.054777 | −0.193140 | −0.097173 | −0.154345 | −0.119104 |
+| 2014-05-08 | −0.188484 | −0.068142 | −0.199911 | −0.108514 | −0.166982 | −0.135836 |
+| 2014-05-09 | −0.202692 | −0.080019 | −0.221213 | −0.123692 | −0.182837 | −0.160709 |
+| 2014-05-12 | −0.211839 | −0.083080 | −0.233161 | −0.137331 | −0.195498 | −0.175057 |
+| 2014-05-13 | −0.208562 | −0.083637 | −0.233889 | −0.133132 | −0.193090 | −0.173510 |
 
 Predicción:
 
-| Fecha | ẑ NEM | ẑ GFI | ẑ RGLD | P_{t\|t−1} NEM | P GFI | P RGLD |
+| Fecha | ẑ DUK | ẑ ED | ẑ ES | ẑ CMS | ẑ AEE | diag P_{t\|t−1} (DUK, ED, ES, CMS, AEE) |
 |---|---|---|---|---|---|---|
-| 2014-08-13 | 0.330291 | −0.435219 | 0.816060 | 0.001758 | 0.000563 | 0.000596 |
-| 2014-08-14 | 0.331925 | −0.435967 | 0.815154 | 0.001752 | 0.000562 | 0.000594 |
-| 2014-08-15 | 0.333939 | −0.436889 | 0.814094 | 0.001747 | 0.000561 | 0.000593 |
-| 2014-08-18 | 0.335628 | −0.437651 | 0.813233 | 0.001742 | 0.000560 | 0.000592 |
-| 2014-08-19 | 0.337352 | −0.438439 | 0.812350 | 0.001736 | 0.000559 | 0.000590 |
+| 2014-05-07 | −0.204080 | 0.475316 | 0.108411 | 0.371111 | 0.269637 | 5.65, 1.52, 8.85, 7.88, 2.24 (·10⁻⁴) |
+| 2014-05-08 | −0.203744 | 0.475029 | 0.108657 | 0.370816 | 0.269744 | 5.65, 1.52, 8.85, 7.88, 2.24 |
+| 2014-05-09 | −0.203632 | 0.474906 | 0.108749 | 0.370712 | 0.269787 | 5.64, 1.51, 8.85, 7.87, 2.24 |
+| 2014-05-12 | −0.203284 | 0.474422 | 0.108961 | 0.370516 | 0.269895 | 5.64, 1.51, 8.84, 7.87, 2.24 |
+| 2014-05-13 | −0.202659 | 0.473635 | 0.109096 | 0.370354 | 0.270036 | 5.64, 1.50, 8.85, 7.87, 2.24 |
 
 Innovación, su varianza y ganancia:
 
-| Fecha | ỹ_t | S_t | K NEM | K GFI | K RGLD |
-|---|---|---|---|---|---|
-| 2014-08-13 | −0.082402 | 0.014616 | −0.019832 | 0.009085 | 0.010990 |
-| 2014-08-14 | −0.104756 | 0.014611 | −0.019221 | 0.008799 | 0.010121 |
-| 2014-08-15 | −0.091825 | 0.014606 | −0.018392 | 0.008295 | 0.009378 |
-| 2014-08-18 | −0.088693 | 0.014611 | −0.019440 | 0.008890 | 0.009957 |
-| 2014-08-19 | −0.099549 | 0.014605 | −0.018008 | 0.008033 | 0.009359 |
+| Fecha | ỹ_t (spread) | S_t | K DUK | K ED | K ES | K CMS | K AEE |
+|---|---|---|---|---|---|---|---|
+| 2014-05-07 | 0.006393 | 0.000283 | 0.052597 | −0.044948 | 0.038400 | −0.046138 | 0.016675 |
+| 2014-05-08 | 0.002948 | 0.000283 | 0.038075 | −0.041868 | 0.031507 | −0.035358 | 0.014727 |
+| 2014-05-09 | 0.010658 | 0.000283 | 0.032593 | −0.045339 | 0.019810 | −0.018383 | 0.010139 |
+| 2014-05-12 | 0.016535 | 0.000283 | 0.037823 | −0.047618 | 0.008163 | −0.009800 | 0.008481 |
+| 2014-05-13 | 0.018155 | 0.000283 | 0.035737 | −0.047602 | 0.014349 | −0.012946 | 0.008112 |
 
 Corrección:
 
-| Fecha | ẑ_{t\|t} NEM | GFI | RGLD | P_{t\|t} NEM | P GFI | P RGLD |
+| Fecha | ẑ_{t\|t} DUK | ED | ES | CMS | AEE | diag P_{t\|t} (·10⁻⁴) |
 |---|---|---|---|---|---|---|
-| 2014-08-13 | 0.331925 | −0.435967 | 0.815154 | 0.001752 | 0.000562 | 0.000594 |
-| 2014-08-14 | 0.333939 | −0.436889 | 0.814094 | 0.001747 | 0.000561 | 0.000593 |
-| 2014-08-15 | 0.335628 | −0.437651 | 0.813233 | 0.001742 | 0.000560 | 0.000591 |
-| 2014-08-18 | 0.337352 | −0.438439 | 0.812350 | 0.001736 | 0.000558 | 0.000590 |
-| 2014-08-19 | 0.339144 | −0.439239 | 0.811418 | 0.001732 | 0.000558 | 0.000589 |
+| 2014-05-07 | −0.203744 | 0.475029 | 0.108657 | 0.370816 | 0.269744 | 5.65, 1.52, 8.85, 7.88, 2.24 |
+| 2014-05-08 | −0.203632 | 0.474906 | 0.108749 | 0.370712 | 0.269787 | 5.64, 1.51, 8.85, 7.87, 2.24 |
+| 2014-05-09 | −0.203284 | 0.474422 | 0.108961 | 0.370516 | 0.269895 | 5.64, 1.51, 8.84, 7.87, 2.24 |
+| 2014-05-12 | −0.202659 | 0.473635 | 0.109096 | 0.370354 | 0.270036 | 5.64, 1.50, 8.84, 7.87, 2.24 |
+| 2014-05-13 | −0.202010 | 0.472771 | 0.109356 | 0.370119 | 0.270183 | 5.63, 1.50, 8.84, 7.87, 2.24 |
 
 **Cómo se lee:**
 - Como A = I, ẑ_{t|t} de un día es ẑ_{t+1|t} del siguiente.
-- ỹ es negativo los 5 días (FNV barata frente a la canasta): la desviación persiste, y esa es la reversión que se opera.
-- P apenas baja porque ya está cerca de su piso.
+- ỹ es positivo los 5 días y crece: XEL está cara frente a la canasta.
+- Cada peso se mueve muy poco (K·ỹ ≈ 10⁻⁴) y P apenas baja, porque ya está en su piso.
+- Pesos publicados el 2014-05-07: β̂ = (+1 XEL, +0.204 DUK, −0.475 ED, −0.108 ES, −0.371 CMS, −0.270 AEE).
 
 ### 5.6 Formulación de Powell (filtro 1)
 
 **Proceso de 6 pasos:**
-
-1. **Definir el problema:** estimar cada día los pesos que hacen estacionario al spread de NEM, GFI, FNV y RGLD, sin información futura y sin destruir la reversión.
-2. **Modelar el estado:** z_t = β_t (3 pesos libres), con la creencia (ẑ_{t|t}, P_{t|t}).
+1. **Definir el problema:** estimar cada día los pesos que hacen estacionario al spread de las 6 eléctricas, sin información futura y sin destruir la reversión.
+2. **Modelar el estado:** z_t = β_t (5 pesos libres), con la creencia (ẑ_{t|t}, P_{t|t}).
 3. **Modelar la transición:** z_t = I·z_{t−1} + W_t, con W_t ~ N(0, Q) y Q = q·Q_base.
 4. **Modelar la observación:** y_t = C_t·z_t + V_t, con V_t ~ N(0, R), sobre log-precios centrados.
 5. **Definir la regla de decisión:** publicar β̂_t = (+1, −ẑ_{t|t−1}); el spread del día es ỹ_t.
-6. **Definir el mecanismo de aprendizaje:** las ecuaciones de actualización de Kalman (ganancia K_t), con q de la rejilla y R por OLS en train.
+6. **Definir el mecanismo de aprendizaje:** las ecuaciones de actualización de Kalman (ganancia K_t), con q en el centro de la meseta y R por OLS en train.
 
 **Cinco elementos:**
 
@@ -375,31 +435,36 @@ Corrección:
 
 ## 6. Figuras (`artifacts/figures/`)
 
-- **Figura 1** (`fig1_log_precios.png`): log-precios de los 4 activos del grupo final.
+- **Figura 1** (`fig1_log_precios.png`): log-precios de los 6 activos del grupo final.
 - **Figura 3** (`fig3_beta_t.png`): β̂_t por activo, con el β de Johansen de train de referencia.
-- **Figura 4** (`fig4_eigenvector.png`): primer eigenvector móvil (solo datos pasados).
-- **Convergencia** (`fig_diagnostico_filtro1.png`, train): P_t en escala log y |K_t| en escala **lineal**.
+- **Figura 4** (`fig4_eigenvector.png`): primer eigenvector de Johansen móvil (504 días pasados, vector unitario).
+- **Convergencia** (`fig_diagnostico_filtro1.png`): P_t en escala log y |K_t| en escala **lineal**, con la banda estable de train y el fin del burn-in.
+- **Rejilla de q** (`fig_rejilla_q.png`, train): los criterios (a)-(d) en función de q, la meseta sombreada y el q elegido.
 
-Las figuras 1, 3 y 4 tienen las fronteras train/test/valid dibujadas y etiquetadas. Se revisaron con vistas recortadas a train.
+Las figuras 1, 3, 4 y la de convergencia tienen las fronteras train/test/valid dibujadas y etiquetadas. La de la rejilla no es una serie de tiempo; su título dice que es de train.
 
 ## 7. Limitaciones y declaraciones
 
-1. **Correlación de 0.7 (etapa 2):** ningún subgrupo llega a 0.7 con retornos diarios (máximo 0.647 en energía y 0.652 en oro). El respaldo se adoptó **después** de ver el fracaso: es una **desviación declarada**.
-2. **Data snooping y pruebas múltiples:**
-   - **Se probaron dos sectores** (energía y oro), y el oro se eligió después de que energía fallara.
-   - **Grupos evaluados sumando todas las corridas:**
-     - en esta rama: 84 (energía) + 84 (oro) + 3 candidatos nuevos de 3, 4 y 5 activos = **171**;
-     - con las versiones anteriores sobre el mismo train (2 × 8,008): **16,187**.
-   - **Pruebas de hipótesis en esta rama:** 36 de Engle-Granger, **33 de Johansen** (30 del embudo más 3 candidatos nuevos) y 4 × 29 configuraciones de q.
-   - **Falsos positivos esperados por azar al 5%:**
-     - Engle-Granger: 36 × 0.05 = **1.8** (pasó 1);
-     - Johansen: 33 × 0.05 = **1.65**;
-     - si los 16,187 grupos se hubieran probado al 5%: alrededor de **809**.
-   - **No sobrevive a Bonferroni:** con 33 pruebas de Johansen el umbral sería p < 0.0015 (más exigente que el 99%), y la traza del ganador **no pasa ni al 99%** (49.92 < 54.68).
-   - Las correcciones formales para el desempeño resultante son el **Deflated Sharpe Ratio** (Bailey y López de Prado, 2014) y el **Reality Check** (White, 2000).
-3. **Estabilidad baja:** 3 de 14 sub-ventanas (21%), ninguna después de 2015. Una ruptura fuera de muestra es probable.
-4. **Burn-in del 40.1% de train** (908 días), por el q pequeño.
-5. **ADF del spread de Kalman en el límite** (p = 0.0476), y el q elegido no viene de una meseta.
-6. **Vida media cerca del máximo** (57.9 días con Johansen y 55.5 con Kalman).
-7. **Train es en muestra** para el filtro.
-8. Se excluyó Barrick por falta de datos.
+1. **Data snooping y pruebas múltiples (conteo exacto, `selected_group.json` → `multiple_testing`):**
+   - **v5:** 8 sectores, 73 activos, 938 subgrupos en la etapa 2 más 37 recortes, o sea **975 grupos**. Pruebas:
+     - **299** de Engle-Granger;
+     - **910** de Johansen en train;
+     - **12,740** de Johansen en sub-ventanas;
+     - **81,195** ADF sobre columnas de Johansen;
+     - **16,527** configuraciones de q, cada una con su ADF.
+   - **Con todas las versiones anteriores:** 16,187 + 975 = **17,162 grupos**, y **10 sectores o universos** distintos: energía v1, petroleras del equipo, oro y 7 sectores nuevos.
+   - **Falsos positivos esperados por azar al 5%:** 910 × 0.05 = **45.5** pruebas de Johansen "significativas" aunque nada estuviera cointegrado.
+   - **Bonferroni** para 910 pruebas de Johansen: p < 5.5·10⁻⁵. La traza del ganador **no pasa ni al 99%**, así que **no sobrevive a Bonferroni**. El ADF de su spread (p = 1.1·10⁻⁷) sí quedaría debajo de ese umbral, pero ese p usa valores críticos de Dickey-Fuller para un vector **estimado**, así que es optimista.
+   - **Lo que defiende al ganador frente al azar:**
+     - pasa además 6 requisitos independientes de la prueba de rango, entre ellos 79% de estabilidad, una meseta de q y la correlación de retornos;
+     - 21 de los 23 grupos con 6 o más requisitos son del mismo sector (eléctricas): la relación aparece de forma consistente en el sector y no en un solo grupo afortunado.
+   - Las correcciones formales para el desempeño resultante son el **Deflated Sharpe Ratio** (Bailey y López de Prado, 2014) y el **Reality Check** (White, 2000); le tocan al backtest.
+2. **Se buscó entre sectores:** ampliar la búsqueda mejora la evidencia, pero es un grado de libertad del investigador. Se mitigó registrando la lista y la regla antes de ver datos (commit `e52f6a2`).
+3. **Respaldo de la etapa 2 en 4 sectores** (contador = 4). No afecta al ganador, que pasa la correlación.
+4. **Burn-in del 37.1% de train** (840 días), por el q pequeño.
+5. **La traza no pasa al 99%** (101.56 contra 104.96).
+6. **Estabilidad del 79%:** las 3 sub-ventanas inestables son las últimas de train.
+7. **CMS pesa 4.7% del nocional** y su peso de Kalman tiene signo contrario al de Johansen (estable después del burn-in).
+8. **Innovaciones del filtro 1 autocorrelacionadas** (0.967): es la reversión del spread, no un defecto del filtro.
+9. **Train es en muestra** para el filtro.
+10. **Exclusiones de datos:** BK, CMA, SNV y BZH (sin reemplazo); Barrick en el oro (v1).
