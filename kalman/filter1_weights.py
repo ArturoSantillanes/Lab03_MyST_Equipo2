@@ -3,7 +3,7 @@
 Dueño: Milca
 Lee: data/processed/prices.csv, data/processed/splits.json, artifacts/cointegration/selected_group.json
 Escribe: artifacts/kalman/beta_t.csv, spread_t.csv, gain_1.csv, posvar_1.csv, filter1_q_grid.csv, filter1_params.json,
-         artifacts/figures/fig3_beta_t.png, fig_diagnostico_filtro1.png
+         artifacts/figures/fig3_beta_t.png, fig_diagnostico_filtro1.png, fig_rejilla_q.png
 Reglas: q, R, P_0 y el burn-in se eligen SOLO con train. Sin aleatoriedad (semilla 42 en main.py).
 
 Notación del profesor:
@@ -28,16 +28,19 @@ necesitan las series de test y valid); nada se estima, calibra ni elige con test
 Calibración de Q (NO por máxima verosimilitud libre: en este modelo elige Q demasiado grande, los pesos persiguen
 cada desviación y el filtro se come la reversión que se quiere operar):
     Q = q · Q_base, con Q_base = R · diag(1 / E[C_i²] en train)  (cada componente aporta lo mismo a la predicción)
-    q en Q_GRID: 29 valores log-espaciados de 1e-8 a 1e-1 (4 por década), de "pesos casi congelados"
-    (Q/R ~ 1e-7) a "pesos que persiguen cada desviación" (Q/R ~ 1).
+    q en Q_GRID: rejilla FINA de 141 valores log-espaciados de 1e-8 a 1e-1 (20 por década), de "pesos casi
+    congelados" (Q/R ~ 1e-7) a "pesos que persiguen cada desviación" (Q/R ~ 1).
     Criterio fijado ANTES de ver resultados (train, después del burn-in de cada q):
       (a) spread estacionario: ADF p < 0.05
       (b) vida media del spread entre 5 y 60 días
       (c) CERO cambios de signo en los pesos
       (d) los pesos siguen adaptándose: al final de train difieren en al menos MIN_ADAPTATION de los que daría el
           filtro con Q = 0 (pesos congelados)
-    Si varios q cumplen: el centro de la meseta (la racha contigua más larga de q que cumplen; su valor central).
-    Si ninguno cumple, el grupo no tiene q válido (no hay respaldo).
+    q elegido = centro de la racha contigua más larga de q que cumplen. MESETA = esa racha tiene al menos
+    PLATEAU_MIN_POINTS = 5 valores (q puede moverse ±26% alrededor del centro sin salir de la región válida).
+    Si hay q válidos pero no hay meseta, se refina con ULTRAFINE_PER_DECADE = 100 valores por década alrededor de
+    la región válida para concluir si son puntos aislados (la decisión de meseta se toma en la rejilla fina, como
+    dice el preregistro). Si ningún q cumple, el grupo no tiene q válido (no hay respaldo).
 R = varianza residual de la regresión OLS estática (sin constante, log-precios centrados) en train.
 P_0 = P0_DIFFUSE · I: con el vector normalizado todos los |β_i| <= 1, así que una desviación de 100 es difusa.
 Burn-in: primer día desde el cual la varianza posterior de TODOS los componentes se queda por debajo del techo de su
@@ -50,7 +53,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.stats.diagnostic import acorr_ljungbox
 
-from cointegration.figures import plot_beta, plot_filter_diagnostic, ticker_colors
+from cointegration.figures import plot_beta, plot_filter_diagnostic, plot_q_grid, ticker_colors
 from cointegration.spread_checks import HALF_LIFE_RANGE, MAX_ADF_PVALUE, adf_test, half_life
 from data.split import assign_period, slice_period
 
@@ -59,7 +62,10 @@ PRICES_PATH = ROOT / "data" / "processed" / "prices.csv"
 SPLITS_PATH = ROOT / "data" / "processed" / "splits.json"
 SELECTION_PATH = ROOT / "artifacts" / "cointegration" / "selected_group.json"
 OUT_DIR = ROOT / "artifacts" / "kalman"
-Q_GRID = np.logspace(-8, -1, 29)
+Q_GRID = np.logspace(-8, -1, 141)
+GRID_STEP_DECADES = 0.05
+PLATEAU_MIN_POINTS = 5
+ULTRAFINE_PER_DECADE = 100
 MIN_ADAPTATION = 0.05
 P0_DIFFUSE = 1e4
 P0_ROBUSTNESS = (1e2, 1e4, 1e6)
@@ -154,12 +160,12 @@ def evaluate_q(y: np.ndarray, C: np.ndarray, Q: np.ndarray, R: float, z0: np.nda
             **innovation_diagnostics(result["innovation"][burn_in:], result["innovation_var"][burn_in:])}
 
 
-def q_grid(y: np.ndarray, C: np.ndarray, R: float, z0: np.ndarray) -> pd.DataFrame:
-    """Barre Q_GRID y marca qué q cumplen cada parte del criterio."""
+def q_grid(y: np.ndarray, C: np.ndarray, R: float, z0: np.ndarray, grid: np.ndarray = Q_GRID) -> pd.DataFrame:
+    """Barre la rejilla de q y marca qué q cumplen cada parte del criterio."""
     Q_base = state_noise_base(C, R)
     frozen_end = kalman_filter(y, C, np.zeros_like(Q_base), R, z0, P0_DIFFUSE * np.eye(len(z0)))["z_prior"][-1]
     table = pd.DataFrame([{"q": q, "Q_over_R": float(np.diag(q * Q_base).mean() / R),
-                           **evaluate_q(y, C, q * Q_base, R, z0, frozen_end)} for q in Q_GRID])
+                           **evaluate_q(y, C, q * Q_base, R, z0, frozen_end)} for q in grid])
     return table.assign(
         ok_a_stationary=table["spread_adf_pvalue"] < MAX_ADF_PVALUE,
         ok_b_half_life=table["spread_half_life_days"].between(*HALF_LIFE_RANGE),
@@ -168,17 +174,20 @@ def q_grid(y: np.ndarray, C: np.ndarray, R: float, z0: np.ndarray) -> pd.DataFra
     ).assign(ok_all=lambda t: t.filter(like="ok_").all(axis=1))
 
 
-def plateau_center(passing: pd.Series) -> int | None:
-    """Posición central de la racha contigua más larga de valores True; None si no hay ninguno."""
-    runs, current = [], []
+def longest_valid_run(passing: pd.Series) -> list[int]:
+    """Posiciones de la racha contigua más larga de valores True (la primera si empatan); [] si no hay ninguno."""
+    longest, current = [], []
     for i, ok in enumerate(passing):
         current = current + [i] if ok else []
-        if current:
-            runs.append(list(current))
-    if not runs:
-        return None
-    longest = max(runs, key=len)
-    return longest[len(longest) // 2]
+        if len(current) > len(longest):
+            longest = list(current)
+    return longest
+
+
+def ultrafine_grid(valid_q: pd.Series) -> np.ndarray:
+    """Rejilla de ULTRAFINE_PER_DECADE por década que cubre la región válida más un paso fino a cada lado."""
+    low, high = np.log10(valid_q.min()) - GRID_STEP_DECADES, np.log10(valid_q.max()) + GRID_STEP_DECADES
+    return np.logspace(low, high, int(round((high - low) * ULTRAFINE_PER_DECADE)) + 1)
 
 
 def calibrate_group(log_prices_train: pd.DataFrame, beta: dict, leg: str) -> dict:
@@ -190,16 +199,25 @@ def calibrate_group(log_prices_train: pd.DataFrame, beta: dict, leg: str) -> dic
     z0 = -np.array([beta[t] for t in others])
     R = observation_noise(y, C)
     grid = q_grid(y, C, R, z0)
-    position = plateau_center(grid["ok_all"])
+    run = longest_valid_run(grid["ok_all"])
+    plateau = len(run) >= PLATEAU_MIN_POINTS
     calibration = {"tickers": tickers, "leg": leg, "others": others, "train_mean": train_mean, "z0": z0, "R": R,
-                   "grid": grid, "q": None}
-    if position is None:
+                   "grid": grid.assign(resolution="fina"), "q": None, "q_valid_count": int(grid["ok_all"].sum()),
+                   "longest_run": len(run), "plateau": plateau}
+    if not run:
         return calibration
+    if not plateau:
+        ultrafine = q_grid(y, C, R, z0, ultrafine_grid(grid.loc[grid["ok_all"], "q"]))
+        calibration.update(grid=pd.concat([calibration["grid"], ultrafine.assign(resolution="ultrafina")], ignore_index=True),
+                           ultrafine_valid=int(ultrafine["ok_all"].sum()), ultrafine_points=len(ultrafine),
+                           ultrafine_longest_run=len(longest_valid_run(ultrafine["ok_all"])))
+    position = run[len(run) // 2]
     q = float(grid.iloc[position]["q"])
     Q = q * state_noise_base(C, R)
     result = kalman_filter(y, C, Q, R, z0, P0_DIFFUSE * np.eye(len(z0)))
     burn_in = measure_burn_in(result["posvar"])
     calibration.update(q=q, Q=Q, burn_in=burn_in, metrics=grid.iloc[position].to_dict(),
+                       plateau_q_range=(float(grid.iloc[run[0]]["q"]), float(grid.iloc[run[-1]]["q"])),
                        sign_changes_by_asset=dict(zip(others, sign_changes(-result["z_prior"][burn_in:]).tolist())),
                        posvar_floor=dict(zip(others, np.median(result["posvar"][burn_in:], axis=0).tolist())),
                        posvar_train=result["posvar"], y=y, C=C)
@@ -257,7 +275,14 @@ def run() -> None:
         "tickers": tickers, "normalization_leg": leg,
         "train_mean_log_price": calibration["train_mean"].to_dict(),
         "R": R, "R_daily_std_log": float(np.sqrt(R)),
-        "q_grid_size": len(grid), "q_passing": int(grid["ok_all"].sum()), "q": calibration["q"],
+        "q_grid_size": len(Q_GRID), "q_grid": "141 valores log-espaciados de 1e-8 a 1e-1 (20 por década)",
+        "q_passing": calibration["q_valid_count"], "q": calibration["q"],
+        "q_longest_valid_run": calibration["longest_run"], "plateau_min_points": PLATEAU_MIN_POINTS,
+        "plateau": calibration["plateau"], "plateau_q_range": calibration["plateau_q_range"],
+        "q_is_center_of_longest_run": True,
+        "ultrafine_points": calibration.get("ultrafine_points", 0), "ultrafine_valid": calibration.get("ultrafine_valid", 0),
+        "ultrafine_longest_run": calibration.get("ultrafine_longest_run", 0),
+        "q_configurations_total": len(grid),
         "q_on_grid_edge": bool(calibration["q"] in (Q_GRID.min(), Q_GRID.max())), "fallback_count": 0,
         "Q_over_R": float(calibration["metrics"]["Q_over_R"]), "Q_diag": dict(zip(others, np.diag(Q).tolist())),
         "P0": f"{P0_DIFFUSE:g} · I", "z0": dict(zip(others, z0.tolist())),
@@ -277,12 +302,13 @@ def run() -> None:
     grid.to_csv(OUT_DIR / "filter1_q_grid.csv", index=False)
     (OUT_DIR / "filter1_params.json").write_text(json.dumps(params, indent=2, ensure_ascii=False))
     plot_beta(frames["beta_t"], selection["beta"], splits)
-    train_rows = frames["posvar_1"]["period"] == "train"
-    plot_filter_diagnostic(frames["posvar_1"].loc[train_rows, others], frames["gain_1"].loc[train_rows, others],
-                           centered.index[burn_in], stable_band(calibration["posvar_train"]), ticker_colors(tickers))
+    plot_filter_diagnostic(frames["posvar_1"][others], frames["gain_1"][others], centered.index[burn_in],
+                           stable_band(calibration["posvar_train"]), ticker_colors(tickers), splits)
+    plot_q_grid(grid, calibration["q"], calibration["plateau_q_range"], PLATEAU_MIN_POINTS)
 
     m = params["chosen_q_metrics"]
-    print(f"  q = {params['q']:.2e} ({params['q_passing']} de {len(grid)} cumplen (a)-(d); orilla: {params['q_on_grid_edge']}); "
+    print(f"  q = {params['q']:.2e} ({params['q_passing']} de {len(Q_GRID)} cumplen (a)-(d); racha más larga "
+          f"{params['q_longest_valid_run']}; meseta: {params['plateau']}; orilla: {params['q_on_grid_edge']}); "
           f"R = {R:.3e}; burn-in = {burn_in} días ({params['burn_in_share_of_train']:.0%} de train)")
     print(f"  spread (train, tras burn-in): ADF p = {m['spread_adf_pvalue']:.2e}, vida media = "
           f"{m['spread_half_life_days']:.1f} días, cambios de signo = {sum(params['sign_changes_by_asset_train'].values())}")
