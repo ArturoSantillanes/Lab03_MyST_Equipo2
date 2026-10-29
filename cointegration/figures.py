@@ -77,7 +77,10 @@ def asset_panels(frame: pd.DataFrame, splits: dict, title: str, ylabel: str, fil
     tickers = [c for c in frame.columns if c not in ("period", "burn_in", "similarity", "rank_trace")]
     colors = ticker_colors(tickers)
     with plt.rc_context(STYLE):
-        fig, axes = plt.subplots(2, 3, figsize=(12, 6.5), sharex=True)
+        n_rows = -(-len(tickers) // 3)
+        fig, axes = plt.subplots(n_rows, 3, figsize=(12, 3.3 * n_rows), sharex=True, squeeze=False)
+        for ax in axes.flat[len(tickers):]:
+            ax.set_visible(False)
         for ax, ticker in zip(axes.flat, tickers):
             ax.plot(frame.index, frame[ticker], color=colors[ticker], linewidth=1.0)
             if reference is not None:
@@ -85,8 +88,9 @@ def asset_panels(frame: pd.DataFrame, splits: dict, title: str, ylabel: str, fil
             mark_periods(ax, frame.index, splits)
             ax.set_title(ticker.upper(), pad=14)
             ax.set_ylabel(ylabel)
-        for ax in axes[-1]:
+        for ax in axes.flat[:len(tickers)]:
             ax.set_xlabel("fecha")
+            ax.tick_params(axis="x", labelbottom=True)
         fig.suptitle(f"{title} ({', '.join(shown_periods(frame.index, splits))})", fontweight="bold")
         fig.legend(handles=[*extra_handles, boundary_handle()], loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.03))
         fig.tight_layout(rect=(0, 0.04, 1, 1))
@@ -94,7 +98,7 @@ def asset_panels(frame: pd.DataFrame, splits: dict, title: str, ylabel: str, fil
 
 
 def plot_log_prices(log_prices: pd.DataFrame, splits: dict) -> Path:
-    """Figura 1: log-precio de cada uno de los 6 activos del grupo."""
+    """Figura 1: log-precio de cada activo del grupo final."""
     return asset_panels(log_prices, splits, "Figura 1 · Log-precios ajustados diarios del grupo elegido",
                         "log(precio en USD)", "fig1_log_precios.png")
 
