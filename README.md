@@ -85,6 +85,6 @@ pytest
 
 Resumen por persona; el detalle (qué generó la IA y cómo se verificó) está en [project_management/ia_log.md](project_management/ia_log.md).
 
-- **Milca:** usó IA (Claude Code) en `data/` (incluye `data/universe.json`), `cointegration/` (embudo de 7 etapas y figuras 1, 3, 4 y de diagnóstico), `kalman/filter1_weights.py`, sus pruebas (`test_split`, `test_cointegration`, `test_beta_stability`, `test_filter1_step`), `project_management/handoff_milca.md` y `docs/secciones/milca.md`; revisó, probó y entendió su código.
+- **Milca:** usó IA (Claude Code) en `data/` (incluye el preregistro de sectores `data/universe.json`), `cointegration/` (embudo de 7 etapas por sector, selección final con los requisitos R1-R7 y figuras 1, 3, 4, de diagnóstico y de la rejilla de q), `kalman/filter1_weights.py`, sus pruebas (`test_split`, `test_cointegration`, `test_beta_stability`, `test_filter1_step`), `project_management/handoff_milca.md` y `docs/secciones/milca.md`; revisó, probó y entendió su código.
 - **Arturo:** usó IA en el armado del repositorio, `project_management/`, `kalman/filter2_spread.py` y `strategy/` (vecm, zscore, signals); revisó, probó y entendió su código.
 - **Paula:** usó IA en `strategy/sizing.py`, `backtest/`, `performance/` y `dashboard/`; revisó, probó y entendió su código.
