@@ -1,0 +1,26 @@
+{
+  "rows_raw": 3772,
+  "tickers": 9,
+  "duplicate_dates": 0,
+  "non_positive_prices": 0,
+  "missing_values_by_ticker": {
+    "nem": 0,
+    "aem": 0,
+    "kgc": 0,
+    "au": 0,
+    "gfi": 0,
+    "hmy": 0,
+    "fnv": 0,
+    "wpm": 0,
+    "rgld": 0
+  },
+  "misaligned_dates": 0,
+  "dates_without_any_price": 0,
+  "anomalous_jumps": [],
+  "anomalous_jumps_count": 0,
+  "possible_data_errors_count": 0,
+  "rows_clean": 3772,
+  "start": "2011-01-03",
+  "end": "2025-12-31",
+  "years": 14.99
+}

@@ -1,0 +1,28 @@
+{
+  "sector": "Cadena de valor del oro: minería (grandes, medianas y africanas) y financiamiento minero por regalías y streaming",
+  "why_this_sector": "El precio del oro es una tendencia estocástica común, observable y dominante: es el principal determinante del ingreso de las nueve empresas. Las mineras venden un producto homogéneo (onzas de oro) a un precio global único, y las empresas de regalías y streaming cobran un porcentaje de esas mismas onzas. Es el ejemplo más claro de un grupo de sustitutos cercanos con un solo motor común. Un primer intento con productoras de petróleo (ver intento1_energia_etapa2.csv) no pudo cumplir el filtro de correlación de retornos > 0.7: mezcla exposiciones distintas (crudo pesado canadiense contra crudo ligero de EE.UU., integradas contra productoras puras), así que sus retornos diarios no se mueven tan juntos.",
+  "why_only_nine": "Mientras más activos se prueban, mayor es la probabilidad de falsos positivos (pruebas múltiples). Limitar el universo a 9 empresas del mismo sector deja C(9,6) = 84 subgrupos y hace que cualquier relación encontrada tenga una razón económica detrás.",
+  "window": {"start": "2011-01-01", "end": "2025-12-31"},
+  "window_justification": "15 años (el máximo permitido) para tener la muestra de entrenamiento más larga posible (~9 años); termina en un año calendario cerrado para que el rango sea exacto y reproducible.",
+  "replacements": "Barrick Gold (GOLD) se excluyó por datos: Yahoo Finance solo tiene su historia desde 2014-03-17 (cambió de ticker ABX a GOLD) y no cubre la ventana. Se reemplazó por Harmony Gold (HMY), productora grande con historia completa. La decisión se tomó por disponibilidad de datos, no por rendimientos.",
+  "assets": [
+    {"ticker": "nem", "name": "Newmont", "segment": "minería: productora grande (senior), diversificada globalmente", "country": "EE.UU.",
+     "justification": "La mayor productora de oro del mundo; minas en América, Australia y África. Su ingreso es casi todo venta de oro a precio spot, así que comparte con las demás la tendencia del precio del oro. Competidora directa de AEM y KGC."},
+    {"ticker": "aem", "name": "Agnico Eagle Mines", "segment": "minería: productora grande (senior) en jurisdicciones estables (Canadá, Finlandia, Australia)", "country": "Canadá",
+     "justification": "Gran productora con costos bajos; vende el mismo producto al mismo precio global que NEM. Doble listado TSX/NYSE. Es razonable un equilibrio de largo plazo con las otras productoras porque todas valen, en esencia, onzas por precio del oro."},
+    {"ticker": "kgc", "name": "Kinross Gold", "segment": "minería: productora mediana-grande (América, África occidental)", "country": "Canadá",
+     "justification": "Productora con mayor apalancamiento operativo (costos más altos): su valor se mueve más que proporcionalmente con el oro, pero en la misma dirección. Doble listado TSX/NYSE."},
+    {"ticker": "au", "name": "AngloGold Ashanti", "segment": "minería: productora grande con operaciones en África, Australia y América", "country": "Sudáfrica/Reino Unido",
+     "justification": "Gran productora con exposición africana; comparte el precio del oro como motor y compite con NEM por el mismo mercado. ADR en NYSE (doble listado con JSE)."},
+    {"ticker": "gfi", "name": "Gold Fields", "segment": "minería: productora grande (Sudáfrica, Ghana, Australia, Perú)", "country": "Sudáfrica",
+     "justification": "Productora con minas en varias regiones; su ingreso es venta de oro y algo de cobre. Misma tendencia común que AU y HMY. ADR en NYSE (doble listado con JSE)."},
+    {"ticker": "hmy", "name": "Harmony Gold", "segment": "minería: productora sudafricana (minas profundas) y Papúa Nueva Guinea", "country": "Sudáfrica",
+     "justification": "Productora de costos altos y alto apalancamiento al precio del oro; competidora de AU y GFI en la misma región. ADR en NYSE (doble listado con JSE)."},
+    {"ticker": "fnv", "name": "Franco-Nevada", "segment": "financiamiento: regalías y streaming (no opera minas)", "country": "Canadá",
+     "justification": "Cobra un porcentaje de la producción de minas de terceros; su ingreso es oro (y otros metales) a precio de mercado sin los costos de operar. Otra parte de la cadena con la misma tendencia común. Doble listado TSX/NYSE."},
+    {"ticker": "wpm", "name": "Wheaton Precious Metals", "segment": "financiamiento: streaming de oro y plata", "country": "Canadá",
+     "justification": "Paga por adelantado a cambio de comprar metal a precio fijo bajo; su margen sigue al precio del oro y de la plata. Competidora directa de FNV y RGLD. Doble listado TSX/NYSE."},
+    {"ticker": "rgld", "name": "Royal Gold", "segment": "financiamiento: regalías y streaming", "country": "EE.UU.",
+     "justification": "Modelo de negocio igual al de FNV y WPM; ingreso ligado al precio del oro. Completa el segmento financiero de la cadena."}
+  ]
+}
