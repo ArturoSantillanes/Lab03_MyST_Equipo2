@@ -1,28 +1,599 @@
 {
-  "sector": "Cadena de valor del oro: minería (grandes, medianas y africanas) y financiamiento minero por regalías y streaming",
-  "why_this_sector": "El precio del oro es una tendencia estocástica común, observable y dominante: es el principal determinante del ingreso de las nueve empresas. Las mineras venden un producto homogéneo (onzas de oro) a un precio global único, y las empresas de regalías y streaming cobran un porcentaje de esas mismas onzas. Es el ejemplo más claro de un grupo de sustitutos cercanos con un solo motor común. Un primer intento con productoras de petróleo (ver intento1_energia_etapa2.csv) no pudo cumplir el filtro de correlación de retornos > 0.7: mezcla exposiciones distintas (crudo pesado canadiense contra crudo ligero de EE.UU., integradas contra productoras puras), así que sus retornos diarios no se mueven tan juntos.",
-  "why_only_nine": "Mientras más activos se prueban, mayor es la probabilidad de falsos positivos (pruebas múltiples). Limitar el universo a 9 empresas del mismo sector deja C(9,6) = 84 subgrupos y hace que cualquier relación encontrada tenga una razón económica detrás.",
-  "window": {"start": "2011-01-01", "end": "2025-12-31"},
+  "version": "v5",
+  "preregistration": {
+    "written_on": "2026-10-29",
+    "statement": "Esta lista de sectores, sus candidatos, el protocolo y la regla de selección se escribieron y se registraron en git ANTES de descargar o mirar un solo dato de los sectores nuevos. No se modifican después. Única salvedad: el conocimiento general previo sobre qué sectores suelen tener retornos muy correlacionados (es la razón de elegirlos y se declara).",
+    "excluded_categories": {
+      "acciones con varias clases o doble listado (BRK-A/BRK-B, BF-A/BF-B, HEI/HEI-A, LEN/LEN-B)": "Se consideraron explícitamente y se excluyen: forman grupos de 2 activos de la misma empresa (por debajo del mínimo de 3 de este bloque), su relación es contractual (derechos de conversión), no un equilibrio de mercado entre empresas, y no es el problema multi-activo de Johansen que pide el laboratorio. Se deja como pregunta para el profesor.",
+      "ETF sustitutos (SPY/IVV/VOO)": "Misma razón: son el mismo portafolio, no empresas con un equilibrio económico.",
+      "aerolíneas": "No hay de 8 a 12 aerolíneas de EE.UU. con historia completa desde 2011 (AAL nace en 2013; HA y SAVE salieron de bolsa).",
+      "retail": "Mezcla formatos muy distintos (descuento, departamentales, en línea); la correlación de retornos esperada es baja."
+    },
+    "data_rule": "Un ticker sin historia completa en la ventana (le falta más del 1% de los días hábiles o empieza después de la primera semana) se excluye SIN reemplazo y se reporta.",
+    "previously_tested": {
+      "energia_productoras_v1": 84,
+      "historial_total_grupos_antes_de_v5": 16187
+    },
+    "protocol": [
+      "Etapa 1: universo por sector (este archivo).",
+      "Etapa 2: correlación media por pares de log-retornos (ventana móvil 63 días), > 0.7 en las 3 sub-ventanas de train; para todos los subgrupos de 6 activos de cada sector.",
+      "Etapa 3: Engle-Granger por pares p < 0.05: PRIORIZA (orden de evaluación), no elimina.",
+      "Etapas 4 a 6: Johansen (traza y máximo eigenvalor al 95%), selección de columna por ADF y vida media, validación ADF p < 0.05 y vida media de 5 a 60 días; para TODOS los subgrupos que pasan la etapa 2 (si en un sector ninguno pasa, para todos, y se cuenta como respaldo).",
+      "Etapa 7: estabilidad (etapas 4 a 6 en 14 sub-ventanas de 504 días con paso 126) para todo subgrupo que llega a Johansen.",
+      "Recorte de patas: a cada subgrupo que cumple 4 a 6 se le quitan las patas con |beta| por debajo del 5% del nocional (mínimo 3 activos) y el recorte se evalúa completo.",
+      "Filtro 1: a cada subgrupo que cumple 4 a 6 y a cada recorte se le calibra q en la rejilla fina."
+    ],
+    "q_grid": "Rejilla fina: 141 valores log-espaciados de 1e-8 a 1e-1 (20 por década). Un q es válido si cumple (a) ADF del spread de Kalman p < 0.05, (b) vida media 5-60 días, (c) cero cambios de signo, (d) los pesos se adaptan. MESETA = racha de al menos 5 valores válidos contiguos en la rejilla fina (q puede cambiar ±26% alrededor del centro sin salir de la región válida). q elegido = centro de la racha válida más larga.",
+    "selection_rule": {
+      "eligible_if_all": [
+        "R1 correlación media por pares de retornos > 0.7 en las 3 sub-ventanas",
+        "R2 Johansen r̂ >= 1 (y < n) por traza Y por máximo eigenvalor al 95%",
+        "R3 ADF del spread de Johansen p < 0.05",
+        "R4 vida media del spread de Johansen entre 5 y 60 días",
+        "R5 existe meseta de q con cero cambios de signo",
+        "R6 ADF del spread de Kalman p < 0.05 en el q elegido (sin q válido no se cumple)",
+        "R7 estabilidad >= 50% de las sub-ventanas"
+      ],
+      "order_among_eligible": [
+        "mayor estabilidad",
+        "ADF de Johansen más negativo",
+        "menor burn-in como % de train",
+        "más activos"
+      ],
+      "if_none_eligible": "No se baja ningún requisito: se ordena por número de requisitos cumplidos (desc) y luego con el mismo orden; se declara exactamente qué requisitos no cumple el elegido y por cuánto."
+    }
+  },
+  "window": {
+    "start": "2011-01-01",
+    "end": "2025-12-31"
+  },
   "window_justification": "15 años (el máximo permitido) para tener la muestra de entrenamiento más larga posible (~9 años); termina en un año calendario cerrado para que el rango sea exacto y reproducible.",
-  "replacements": "Barrick Gold (GOLD) se excluyó por datos: Yahoo Finance solo tiene su historia desde 2014-03-17 (cambió de ticker ABX a GOLD) y no cubre la ventana. Se reemplazó por Harmony Gold (HMY), productora grande con historia completa. La decisión se tomó por disponibilidad de datos, no por rendimientos.",
-  "assets": [
-    {"ticker": "nem", "name": "Newmont", "segment": "minería: productora grande (senior), diversificada globalmente", "country": "EE.UU.",
-     "justification": "La mayor productora de oro del mundo; minas en América, Australia y África. Su ingreso es casi todo venta de oro a precio spot, así que comparte con las demás la tendencia del precio del oro. Competidora directa de AEM y KGC."},
-    {"ticker": "aem", "name": "Agnico Eagle Mines", "segment": "minería: productora grande (senior) en jurisdicciones estables (Canadá, Finlandia, Australia)", "country": "Canadá",
-     "justification": "Gran productora con costos bajos; vende el mismo producto al mismo precio global que NEM. Doble listado TSX/NYSE. Es razonable un equilibrio de largo plazo con las otras productoras porque todas valen, en esencia, onzas por precio del oro."},
-    {"ticker": "kgc", "name": "Kinross Gold", "segment": "minería: productora mediana-grande (América, África occidental)", "country": "Canadá",
-     "justification": "Productora con mayor apalancamiento operativo (costos más altos): su valor se mueve más que proporcionalmente con el oro, pero en la misma dirección. Doble listado TSX/NYSE."},
-    {"ticker": "au", "name": "AngloGold Ashanti", "segment": "minería: productora grande con operaciones en África, Australia y América", "country": "Sudáfrica/Reino Unido",
-     "justification": "Gran productora con exposición africana; comparte el precio del oro como motor y compite con NEM por el mismo mercado. ADR en NYSE (doble listado con JSE)."},
-    {"ticker": "gfi", "name": "Gold Fields", "segment": "minería: productora grande (Sudáfrica, Ghana, Australia, Perú)", "country": "Sudáfrica",
-     "justification": "Productora con minas en varias regiones; su ingreso es venta de oro y algo de cobre. Misma tendencia común que AU y HMY. ADR en NYSE (doble listado con JSE)."},
-    {"ticker": "hmy", "name": "Harmony Gold", "segment": "minería: productora sudafricana (minas profundas) y Papúa Nueva Guinea", "country": "Sudáfrica",
-     "justification": "Productora de costos altos y alto apalancamiento al precio del oro; competidora de AU y GFI en la misma región. ADR en NYSE (doble listado con JSE)."},
-    {"ticker": "fnv", "name": "Franco-Nevada", "segment": "financiamiento: regalías y streaming (no opera minas)", "country": "Canadá",
-     "justification": "Cobra un porcentaje de la producción de minas de terceros; su ingreso es oro (y otros metales) a precio de mercado sin los costos de operar. Otra parte de la cadena con la misma tendencia común. Doble listado TSX/NYSE."},
-    {"ticker": "wpm", "name": "Wheaton Precious Metals", "segment": "financiamiento: streaming de oro y plata", "country": "Canadá",
-     "justification": "Paga por adelantado a cambio de comprar metal a precio fijo bajo; su margen sigue al precio del oro y de la plata. Competidora directa de FNV y RGLD. Doble listado TSX/NYSE."},
-    {"ticker": "rgld", "name": "Royal Gold", "segment": "financiamiento: regalías y streaming", "country": "EE.UU.",
-     "justification": "Modelo de negocio igual al de FNV y WPM; ingreso ligado al precio del oro. Completa el segmento financiero de la cadena."}
+  "group_size": 6,
+  "sectors": [
+    {
+      "id": "oro",
+      "name": "Cadena de valor del oro: minería (grandes, medianas y africanas) y financiamiento minero por regalías y streaming",
+      "status": "probado en v1-v4 con estos mismos 9 activos (se vuelve a evaluar con el protocolo v5)",
+      "common_trend": "precio del oro",
+      "why_this_sector": "El precio del oro es una tendencia estocástica común, observable y dominante: es el principal determinante del ingreso de las nueve empresas. Las mineras venden un producto homogéneo (onzas de oro) a un precio global único, y las empresas de regalías y streaming cobran un porcentaje de esas mismas onzas. Es el ejemplo más claro de un grupo de sustitutos cercanos con un solo motor común. Un primer intento con productoras de petróleo (ver intento1_energia_etapa2.csv) no pudo cumplir el filtro de correlación de retornos > 0.7: mezcla exposiciones distintas (crudo pesado canadiense contra crudo ligero de EE.UU., integradas contra productoras puras), así que sus retornos diarios no se mueven tan juntos.",
+      "replacements": "Barrick Gold (GOLD) se excluyó por datos: Yahoo Finance solo tiene su historia desde 2014-03-17 (cambió de ticker ABX a GOLD) y no cubre la ventana. Se reemplazó por Harmony Gold (HMY), productora grande con historia completa. La decisión se tomó por disponibilidad de datos, no por rendimientos.",
+      "raw_file": "data/raw/oro.csv",
+      "assets": [
+        {
+          "ticker": "nem",
+          "name": "Newmont",
+          "segment": "minería: productora grande (senior), diversificada globalmente",
+          "country": "EE.UU.",
+          "justification": "La mayor productora de oro del mundo; minas en América, Australia y África. Su ingreso es casi todo venta de oro a precio spot, así que comparte con las demás la tendencia del precio del oro. Competidora directa de AEM y KGC."
+        },
+        {
+          "ticker": "aem",
+          "name": "Agnico Eagle Mines",
+          "segment": "minería: productora grande (senior) en jurisdicciones estables (Canadá, Finlandia, Australia)",
+          "country": "Canadá",
+          "justification": "Gran productora con costos bajos; vende el mismo producto al mismo precio global que NEM. Doble listado TSX/NYSE. Es razonable un equilibrio de largo plazo con las otras productoras porque todas valen, en esencia, onzas por precio del oro."
+        },
+        {
+          "ticker": "kgc",
+          "name": "Kinross Gold",
+          "segment": "minería: productora mediana-grande (América, África occidental)",
+          "country": "Canadá",
+          "justification": "Productora con mayor apalancamiento operativo (costos más altos): su valor se mueve más que proporcionalmente con el oro, pero en la misma dirección. Doble listado TSX/NYSE."
+        },
+        {
+          "ticker": "au",
+          "name": "AngloGold Ashanti",
+          "segment": "minería: productora grande con operaciones en África, Australia y América",
+          "country": "Sudáfrica/Reino Unido",
+          "justification": "Gran productora con exposición africana; comparte el precio del oro como motor y compite con NEM por el mismo mercado. ADR en NYSE (doble listado con JSE)."
+        },
+        {
+          "ticker": "gfi",
+          "name": "Gold Fields",
+          "segment": "minería: productora grande (Sudáfrica, Ghana, Australia, Perú)",
+          "country": "Sudáfrica",
+          "justification": "Productora con minas en varias regiones; su ingreso es venta de oro y algo de cobre. Misma tendencia común que AU y HMY. ADR en NYSE (doble listado con JSE)."
+        },
+        {
+          "ticker": "hmy",
+          "name": "Harmony Gold",
+          "segment": "minería: productora sudafricana (minas profundas) y Papúa Nueva Guinea",
+          "country": "Sudáfrica",
+          "justification": "Productora de costos altos y alto apalancamiento al precio del oro; competidora de AU y GFI en la misma región. ADR en NYSE (doble listado con JSE)."
+        },
+        {
+          "ticker": "fnv",
+          "name": "Franco-Nevada",
+          "segment": "financiamiento: regalías y streaming (no opera minas)",
+          "country": "Canadá",
+          "justification": "Cobra un porcentaje de la producción de minas de terceros; su ingreso es oro (y otros metales) a precio de mercado sin los costos de operar. Otra parte de la cadena con la misma tendencia común. Doble listado TSX/NYSE."
+        },
+        {
+          "ticker": "wpm",
+          "name": "Wheaton Precious Metals",
+          "segment": "financiamiento: streaming de oro y plata",
+          "country": "Canadá",
+          "justification": "Paga por adelantado a cambio de comprar metal a precio fijo bajo; su margen sigue al precio del oro y de la plata. Competidora directa de FNV y RGLD. Doble listado TSX/NYSE."
+        },
+        {
+          "ticker": "rgld",
+          "name": "Royal Gold",
+          "segment": "financiamiento: regalías y streaming",
+          "country": "EE.UU.",
+          "justification": "Modelo de negocio igual al de FNV y WPM; ingreso ligado al precio del oro. Completa el segmento financiero de la cadena."
+        }
+      ]
+    },
+    {
+      "id": "bancos_grandes",
+      "name": "Bancos grandes de EE.UU. (centro financiero y custodios)",
+      "common_trend": "ciclo de crédito de EE.UU., curva de tasas y regulación común (Fed, pruebas de estrés)",
+      "why_this_sector": "Sus balances están expuestos a los mismos préstamos, a la misma curva de tasas y a la misma regulación; el margen financiero y la morosidad se mueven con el ciclo económico de EE.UU. Es de los sectores con mayor correlación de retornos diarios, así que es razonable esperar una tendencia común y un equilibrio de largo plazo entre valuaciones.",
+      "raw_file": "data/raw/bancos_grandes.csv",
+      "assets": [
+        {
+          "ticker": "jpm",
+          "name": "JPMorgan Chase",
+          "segment": "banca universal",
+          "justification": "El banco más grande; préstamos, banca de inversión y depósitos: exposición completa al ciclo de crédito y a tasas."
+        },
+        {
+          "ticker": "bac",
+          "name": "Bank of America",
+          "segment": "banca universal",
+          "justification": "Banco de consumo muy sensible a tasas (margen financiero); mismo mercado y regulación que JPM."
+        },
+        {
+          "ticker": "c",
+          "name": "Citigroup",
+          "segment": "banca universal global",
+          "justification": "Banco sistémico con la misma regulación y exposición a crédito; más internacional, pero mismo motor de tasas."
+        },
+        {
+          "ticker": "wfc",
+          "name": "Wells Fargo",
+          "segment": "banca comercial y de consumo",
+          "justification": "Banco de depósitos e hipotecas de EE.UU.; su ingreso depende de la curva de tasas y del crédito al consumo."
+        },
+        {
+          "ticker": "usb",
+          "name": "U.S. Bancorp",
+          "segment": "banco superregional",
+          "justification": "Banco comercial grande de EE.UU.; mismos clientes y misma sensibilidad a tasas que WFC y PNC."
+        },
+        {
+          "ticker": "pnc",
+          "name": "PNC Financial",
+          "segment": "banco superregional",
+          "justification": "Banco comercial grande; competidor directo de USB y WFC con el mismo modelo de margen financiero."
+        },
+        {
+          "ticker": "gs",
+          "name": "Goldman Sachs",
+          "segment": "banca de inversión",
+          "justification": "Banco sistémico regulado por la Fed; su ingreso depende de mercados de capital, que comparten el ciclo con el crédito."
+        },
+        {
+          "ticker": "ms",
+          "name": "Morgan Stanley",
+          "segment": "banca de inversión y gestión patrimonial",
+          "justification": "Competidor directo de GS; mismo regulador, mismos mercados."
+        },
+        {
+          "ticker": "bk",
+          "name": "BNY Mellon",
+          "segment": "custodia",
+          "justification": "Banco custodio sistémico; su ingreso por depósitos y comisiones sigue a tasas y valuación de mercado, igual que STT."
+        },
+        {
+          "ticker": "stt",
+          "name": "State Street",
+          "segment": "custodia",
+          "justification": "Competidor directo de BK; mismo modelo de negocio y misma regulación."
+        }
+      ]
+    },
+    {
+      "id": "bancos_regionales",
+      "name": "Bancos regionales de EE.UU.",
+      "common_trend": "tasas de interés, depósitos y crédito comercial e inmobiliario regional de EE.UU.",
+      "why_this_sector": "Son bancos con el mismo modelo (depósitos locales que financian préstamos comerciales e inmobiliarios); su valor depende casi solo del margen financiero y de la calidad del crédito en EE.UU. Se mueven en bloque (por ejemplo en 2023), lo que sugiere un factor común fuerte.",
+      "raw_file": "data/raw/bancos_regionales.csv",
+      "assets": [
+        {
+          "ticker": "key",
+          "name": "KeyCorp",
+          "segment": "banco regional (Medio Oeste/Noreste)",
+          "justification": "Banco regional clásico de depósitos y crédito comercial."
+        },
+        {
+          "ticker": "rf",
+          "name": "Regions Financial",
+          "segment": "banco regional (Sureste)",
+          "justification": "Mismo modelo de negocio que KEY; sensibilidad a tasas parecida."
+        },
+        {
+          "ticker": "fitb",
+          "name": "Fifth Third",
+          "segment": "banco regional (Medio Oeste)",
+          "justification": "Competidor directo de KEY y HBAN en la misma región."
+        },
+        {
+          "ticker": "hban",
+          "name": "Huntington Bancshares",
+          "segment": "banco regional (Medio Oeste)",
+          "justification": "Mismo mercado que FITB y KEY."
+        },
+        {
+          "ticker": "mtb",
+          "name": "M&T Bank",
+          "segment": "banco regional (Noreste)",
+          "justification": "Banco regional conservador; misma exposición a crédito inmobiliario comercial."
+        },
+        {
+          "ticker": "zion",
+          "name": "Zions Bancorporation",
+          "segment": "banco regional (Oeste)",
+          "justification": "Banco regional con depósitos comerciales; mismo motor de tasas."
+        },
+        {
+          "ticker": "cma",
+          "name": "Comerica",
+          "segment": "banco regional (Texas, California, Michigan)",
+          "justification": "Banco comercial muy sensible a tasas; mismo modelo."
+        },
+        {
+          "ticker": "tfc",
+          "name": "Truist (antes BB&T)",
+          "segment": "banco regional (Sureste)",
+          "justification": "Competidor directo de RF en el Sureste."
+        },
+        {
+          "ticker": "fhn",
+          "name": "First Horizon",
+          "segment": "banco regional (Sur)",
+          "justification": "Banco regional del Sur; mismo modelo de margen financiero."
+        },
+        {
+          "ticker": "snv",
+          "name": "Synovus",
+          "segment": "banco regional (Sureste)",
+          "justification": "Banco regional del Sureste; competidor de RF y TFC."
+        }
+      ]
+    },
+    {
+      "id": "aseguradoras",
+      "name": "Aseguradoras de daños (propiedad y responsabilidad civil) de EE.UU.",
+      "common_trend": "ciclo de primas del seguro de daños, catástrofes y rendimiento de la cartera de bonos",
+      "why_this_sector": "Venden el mismo producto (pólizas de daños) en el mismo mercado; el 'ciclo de suscripción' (primas altas o bajas), las catástrofes y el rendimiento de sus carteras de bonos les afectan a todas. Es razonable un equilibrio de largo plazo entre sus valuaciones.",
+      "raw_file": "data/raw/aseguradoras.csv",
+      "assets": [
+        {
+          "ticker": "trv",
+          "name": "Travelers",
+          "segment": "daños comerciales y personales",
+          "justification": "Aseguradora de daños grande; referente del ciclo de primas."
+        },
+        {
+          "ticker": "cb",
+          "name": "Chubb (antes ACE)",
+          "segment": "daños comerciales global",
+          "justification": "Competidor directo de TRV en daños comerciales."
+        },
+        {
+          "ticker": "all",
+          "name": "Allstate",
+          "segment": "daños personales (auto y hogar)",
+          "justification": "Mismo mercado de auto y hogar que PGR."
+        },
+        {
+          "ticker": "pgr",
+          "name": "Progressive",
+          "segment": "daños personales (auto)",
+          "justification": "Competidor directo de ALL; mismo ciclo de siniestralidad de autos."
+        },
+        {
+          "ticker": "hig",
+          "name": "The Hartford",
+          "segment": "daños comerciales y personales",
+          "justification": "Aseguradora de daños diversificada; mismo ciclo que TRV."
+        },
+        {
+          "ticker": "cinf",
+          "name": "Cincinnati Financial",
+          "segment": "daños comerciales regionales",
+          "justification": "Aseguradora de daños mediana; mismo producto y regulación."
+        },
+        {
+          "ticker": "wrb",
+          "name": "W. R. Berkley",
+          "segment": "daños comerciales especializados",
+          "justification": "Aseguradora especializada; mismo ciclo de primas comerciales."
+        },
+        {
+          "ticker": "l",
+          "name": "Loews",
+          "segment": "holding con CNA (daños comerciales)",
+          "justification": "Su principal activo es CNA, aseguradora de daños comerciales."
+        },
+        {
+          "ticker": "afg",
+          "name": "American Financial Group",
+          "segment": "daños especializados",
+          "justification": "Aseguradora de daños especializada; competidor de WRB."
+        },
+        {
+          "ticker": "aig",
+          "name": "American International Group",
+          "segment": "daños comerciales global",
+          "justification": "Aseguradora de daños comerciales grande; compite con CB y TRV."
+        }
+      ]
+    },
+    {
+      "id": "electricas",
+      "name": "Eléctricas reguladas de EE.UU. (utilities)",
+      "common_trend": "tasas de interés de largo plazo y rendimientos autorizados por los reguladores estatales",
+      "why_this_sector": "Son monopolios regulados: el regulador les fija un rendimiento sobre su base de activos, así que su valor se comporta como un bono de largo plazo y depende de las mismas tasas. Esa tendencia común hace razonable esperar equilibrio entre sus valuaciones.",
+      "raw_file": "data/raw/electricas.csv",
+      "assets": [
+        {
+          "ticker": "duk",
+          "name": "Duke Energy",
+          "segment": "eléctrica regulada (Carolinas, Florida, Medio Oeste)",
+          "justification": "Gran eléctrica regulada; valuada por su base de activos regulada."
+        },
+        {
+          "ticker": "so",
+          "name": "Southern Company",
+          "segment": "eléctrica regulada (Sureste)",
+          "justification": "Mismo modelo regulado que DUK."
+        },
+        {
+          "ticker": "aep",
+          "name": "American Electric Power",
+          "segment": "eléctrica regulada y transmisión",
+          "justification": "Gran eléctrica regulada; mismo motor de tasas."
+        },
+        {
+          "ticker": "xel",
+          "name": "Xcel Energy",
+          "segment": "eléctrica regulada (Medio Oeste, Colorado)",
+          "justification": "Eléctrica regulada con el mismo modelo de rendimiento autorizado."
+        },
+        {
+          "ticker": "ed",
+          "name": "Consolidated Edison",
+          "segment": "eléctrica y gas regulados (Nueva York)",
+          "justification": "Eléctrica regulada de muy bajo riesgo; casi un bono."
+        },
+        {
+          "ticker": "wec",
+          "name": "WEC Energy",
+          "segment": "eléctrica y gas regulados (Wisconsin)",
+          "justification": "Eléctrica regulada; mismo modelo que XEL y CMS."
+        },
+        {
+          "ticker": "es",
+          "name": "Eversource",
+          "segment": "eléctrica regulada (Nueva Inglaterra)",
+          "justification": "Eléctrica regulada de distribución."
+        },
+        {
+          "ticker": "cms",
+          "name": "CMS Energy",
+          "segment": "eléctrica y gas regulados (Michigan)",
+          "justification": "Competidor regional de DTE con el mismo regulador estatal."
+        },
+        {
+          "ticker": "dte",
+          "name": "DTE Energy",
+          "segment": "eléctrica y gas regulados (Michigan)",
+          "justification": "Mismo estado y mismo regulador que CMS."
+        },
+        {
+          "ticker": "aee",
+          "name": "Ameren",
+          "segment": "eléctrica regulada (Misuri, Illinois)",
+          "justification": "Eléctrica regulada; mismo modelo de base de activos."
+        }
+      ]
+    },
+    {
+      "id": "petroleras_integradas",
+      "name": "Petroleras integradas grandes (majors) y canadienses integradas",
+      "common_trend": "precio internacional del crudo y márgenes de refinación",
+      "why_this_sector": "Producen, refinan y venden crudo y gas a precios internacionales; el precio del Brent/WTI domina su ingreso. A diferencia del intento 1 (productoras puras con crudos distintos), aquí todas son integradas, lo que suaviza diferencias de exposición.",
+      "raw_file": "data/raw/petroleras_integradas.csv",
+      "assets": [
+        {
+          "ticker": "xom",
+          "name": "Exxon Mobil",
+          "segment": "integrada (EE.UU.)",
+          "justification": "La mayor petrolera integrada de EE.UU.; motor: precio del crudo y refinación."
+        },
+        {
+          "ticker": "cvx",
+          "name": "Chevron",
+          "segment": "integrada (EE.UU.)",
+          "justification": "Competidor directo de XOM con la misma estructura."
+        },
+        {
+          "ticker": "bp",
+          "name": "BP",
+          "segment": "integrada (Reino Unido), ADR",
+          "justification": "Integrada global; mismo crudo Brent como motor."
+        },
+        {
+          "ticker": "shel",
+          "name": "Shell",
+          "segment": "integrada (Reino Unido), ADR",
+          "justification": "Integrada global; competidor directo de BP."
+        },
+        {
+          "ticker": "tte",
+          "name": "TotalEnergies",
+          "segment": "integrada (Francia), ADR",
+          "justification": "Integrada global europea; mismo motor que BP y SHEL."
+        },
+        {
+          "ticker": "e",
+          "name": "Eni",
+          "segment": "integrada (Italia), ADR",
+          "justification": "Integrada europea; producción y refinación ligadas al Brent."
+        },
+        {
+          "ticker": "eqnr",
+          "name": "Equinor",
+          "segment": "integrada (Noruega), ADR",
+          "justification": "Integrada con mucha producción de gas y crudo en el Mar del Norte."
+        },
+        {
+          "ticker": "su",
+          "name": "Suncor",
+          "segment": "integrada canadiense (arenas bituminosas + refinación)",
+          "justification": "Integrada; su refinación compensa parte del diferencial del crudo pesado."
+        },
+        {
+          "ticker": "imo",
+          "name": "Imperial Oil",
+          "segment": "integrada canadiense (filial de XOM)",
+          "justification": "Integrada controlada por XOM; vínculo directo de propiedad con XOM."
+        }
+      ]
+    },
+    {
+      "id": "semiconductores",
+      "name": "Semiconductores: equipo de fabricación y chips analógicos/mixtos",
+      "common_trend": "ciclo global de inventarios y de inversión en semiconductores",
+      "why_this_sector": "La demanda de chips y de equipo para fabricarlos sigue el mismo ciclo global de inventarios y de gasto en capital. Las de equipo venden a los mismos clientes (TSMC, Samsung, Intel) y las analógicas a los mismos mercados (industrial, autos).",
+      "raw_file": "data/raw/semiconductores.csv",
+      "assets": [
+        {
+          "ticker": "amat",
+          "name": "Applied Materials",
+          "segment": "equipo de fabricación",
+          "justification": "Mayor proveedor de equipo; su ingreso es el gasto de capital de las fundidoras."
+        },
+        {
+          "ticker": "lrcx",
+          "name": "Lam Research",
+          "segment": "equipo de fabricación (grabado)",
+          "justification": "Competidor directo de AMAT; mismos clientes."
+        },
+        {
+          "ticker": "klac",
+          "name": "KLA",
+          "segment": "equipo de inspección",
+          "justification": "Mismo ciclo de inversión que AMAT y LRCX."
+        },
+        {
+          "ticker": "txn",
+          "name": "Texas Instruments",
+          "segment": "analógicos",
+          "justification": "Mayor fabricante de analógicos; mercado industrial y automotriz."
+        },
+        {
+          "ticker": "adi",
+          "name": "Analog Devices",
+          "segment": "analógicos",
+          "justification": "Competidor directo de TXN."
+        },
+        {
+          "ticker": "mchp",
+          "name": "Microchip",
+          "segment": "microcontroladores y analógicos",
+          "justification": "Mismo mercado industrial que TXN y ADI."
+        },
+        {
+          "ticker": "nxpi",
+          "name": "NXP",
+          "segment": "chips automotrices y mixtos",
+          "justification": "Competidor de MCHP en microcontroladores y automotriz."
+        },
+        {
+          "ticker": "intc",
+          "name": "Intel",
+          "segment": "procesadores y fabricación propia",
+          "justification": "Gran cliente de AMAT/LRCX/KLAC; sigue el ciclo de PC y servidores."
+        },
+        {
+          "ticker": "qcom",
+          "name": "Qualcomm",
+          "segment": "chips móviles",
+          "justification": "Sigue el ciclo de demanda de chips móviles."
+        },
+        {
+          "ticker": "mu",
+          "name": "Micron",
+          "segment": "memoria",
+          "justification": "Memoria: el componente más cíclico; gran cliente del equipo de fabricación."
+        }
+      ]
+    },
+    {
+      "id": "constructoras_vivienda",
+      "name": "Constructoras de vivienda de EE.UU.",
+      "common_trend": "tasas hipotecarias, demanda de vivienda nueva y costo de terrenos y materiales en EE.UU.",
+      "why_this_sector": "Venden el mismo producto (casas nuevas) en el mismo mercado; su demanda depende de las tasas hipotecarias y su margen del costo de terrenos y materiales. Sus retornos se mueven muy juntos, lo que sugiere una tendencia común fuerte.",
+      "raw_file": "data/raw/constructoras_vivienda.csv",
+      "assets": [
+        {
+          "ticker": "dhi",
+          "name": "D.R. Horton",
+          "segment": "constructora nacional (vivienda de entrada)",
+          "justification": "La mayor constructora de EE.UU.; referente del sector."
+        },
+        {
+          "ticker": "len",
+          "name": "Lennar",
+          "segment": "constructora nacional",
+          "justification": "Competidor directo de DHI en los mismos mercados."
+        },
+        {
+          "ticker": "phm",
+          "name": "PulteGroup",
+          "segment": "constructora nacional",
+          "justification": "Mismo producto y mismo ciclo hipotecario."
+        },
+        {
+          "ticker": "tol",
+          "name": "Toll Brothers",
+          "segment": "constructora de lujo",
+          "justification": "Mismo ciclo, segmento de mayor precio."
+        },
+        {
+          "ticker": "nvr",
+          "name": "NVR",
+          "segment": "constructora (Este de EE.UU.)",
+          "justification": "Modelo de opciones de terreno; mismo ciclo de demanda."
+        },
+        {
+          "ticker": "kbh",
+          "name": "KB Home",
+          "segment": "constructora (Oeste y Sur)",
+          "justification": "Competidor de DHI y LEN."
+        },
+        {
+          "ticker": "mth",
+          "name": "Meritage Homes",
+          "segment": "constructora (Sur y Oeste)",
+          "justification": "Mismo mercado de vivienda de entrada."
+        },
+        {
+          "ticker": "bzh",
+          "name": "Beazer Homes",
+          "segment": "constructora mediana",
+          "justification": "Constructora más pequeña y apalancada; mismo ciclo."
+        },
+        {
+          "ticker": "mho",
+          "name": "M/I Homes",
+          "segment": "constructora mediana (Medio Oeste y Sur)",
+          "justification": "Mismo producto y mismo motor hipotecario."
+        }
+      ]
+    }
   ]
 }
