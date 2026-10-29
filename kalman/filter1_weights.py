@@ -49,7 +49,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.stats.diagnostic import acorr_ljungbox
 
-from cointegration.figures import plot_beta, plot_filter_diagnostic
+from cointegration.figures import plot_beta, plot_filter_diagnostic, ticker_colors
 from cointegration.spread_checks import HALF_LIFE_RANGE, MAX_ADF_PVALUE, adf_test, half_life
 from data.split import assign_period, slice_period
 
@@ -265,7 +265,7 @@ def run() -> None:
     plot_beta(frames["beta_t"], selection["beta"], splits)
     train_rows = frames["posvar_1"]["period"] == "train"
     plot_filter_diagnostic(frames["posvar_1"].loc[train_rows, others], frames["gain_1"].loc[train_rows, others],
-                           centered.index[burn_in], band)
+                           centered.index[burn_in], band, ticker_colors(tickers))
 
     m = params["chosen_q_metrics"]
     print(f"  q = {params['q']:.2e} ({params['q_passing']} de {len(grid)} cumplen todo; respaldo: {fallback}; "

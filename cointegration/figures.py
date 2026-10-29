@@ -114,10 +114,10 @@ def plot_rolling_eigenvector(eigvec: pd.DataFrame, splits: dict, window_days: in
                         "componente (vector unitario)", "fig4_eigenvector.png", extra_handles=handles)
 
 
-def plot_filter_diagnostic(posvar: pd.DataFrame, gain: pd.DataFrame, burn_in_end: pd.Timestamp, band: np.ndarray) -> Path:
+def plot_filter_diagnostic(posvar: pd.DataFrame, gain: pd.DataFrame, burn_in_end: pd.Timestamp, band: np.ndarray,
+                           colors: dict) -> Path:
     """Diagnóstico (solo train): varianza posterior P_t (escala log) y |K_t| (escala lineal) por componente."""
     names = list(posvar.columns)
-    colors = dict(zip(names, SERIES_COLORS[1:]))
     with plt.rc_context(STYLE):
         fig, axes = plt.subplots(2, len(names), figsize=(3.3 * len(names), 6.5), sharex=True)
         for i, name in enumerate(names):
