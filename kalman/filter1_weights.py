@@ -1,4 +1,4 @@
-"""Filtro de Kalman 1: pesos dinámicos β̂_t del grupo elegido y spread S_t, sobre log-precios.
+"""Filtro de Kalman 1: pesos dinámicos β̂_t del grupo final y spread S_t, sobre log-precios.
 
 Dueño: Milca
 Lee: data/processed/prices.csv, data/processed/splits.json, artifacts/cointegration/selected_group.json
@@ -7,21 +7,23 @@ Escribe: artifacts/kalman/beta_t.csv, spread_t.csv, gain_1.csv, posvar_1.csv, fi
 Reglas: q, R, P_0 y el burn-in se eligen SOLO con train. Sin aleatoriedad (semilla 42 en main.py).
 
 Notación del profesor:
-    estado        z_t = β_t  (pesos de las 5 patas que no son la de normalización; SIN intercepto α)
+    estado        z_t = β_t  (pesos de las patas que no son la de normalización; SIN intercepto α)
     transición    z_t = A·z_{t-1} + W_t,   W_t ~ N(0, Q),   A = I (explícita)
     observación   y_t = C_t·z_t + V_t,     V_t ~ N(0, R)
-                  y_t = log-precio centrado de la pata de normalización; C_t = log-precios centrados de las otras 5
+                  y_t = log-precio centrado de la pata de normalización; C_t = log-precios centrados de las demás
     Q = covarianza del ruido de proceso = velocidad del drift (qué tan rápido dejamos cambiar los pesos)
     R = varianza del ruido de observación
     Predecir:     ẑ_{t|t-1} = A·ẑ_{t-1|t-1};   P_{t|t-1} = A·P_{t-1|t-1}·Aᵀ + Q
     Actualizar:   ỹ_t = y_t − C_t·ẑ_{t|t-1};   S_t = C_t·P_{t|t-1}·C_tᵀ + R;   K_t = P_{t|t-1}·C_tᵀ·S_t⁻¹
                   ẑ_{t|t} = ẑ_{t|t-1} + K_t·ỹ_t;   P_{t|t} = (I − K_t·C_t)·P_{t|t-1}
-"Centrado" = menos la media de train de cada log-precio. Es el término determinístico (constante sin restringir,
-igual que Johansen con det_order=0); por eso no hay α en el estado. Aquí S_t es la varianza de la innovación;
-el spread se llama S_t solo en el contexto de Johansen (S_t = βᵀP_t).
+"Centrado" = menos la media de train de cada log-precio: es el término determinístico (constante sin restringir,
+igual que Johansen con det_order=0); por eso no hay α en el estado. Aquí S_t es la varianza de la innovación; el
+spread se llama S_t solo en el contexto de Johansen (S_t = βᵀP_t).
 
-Pesos normalizados: +1 en la pata de normalización (la de mayor |β| de Johansen) y −β_{t|t-1} en las demás.
+Pesos normalizados: +1 en la pata de normalización (la de mayor |β| de Johansen) y −ẑ_{t|t-1} en las demás.
 Spread del día t con los pesos previos (sin look-ahead): S_t = β̂_tᵀ(P_t − μ_train) = ỹ_t.
+El filtro se CORRE hacia adelante sobre toda la muestra con parámetros congelados en train (Arturo y Paula
+necesitan las series de test y valid); nada se estima, calibra ni elige con test o valid.
 
 Calibración de Q (NO por máxima verosimilitud libre: en este modelo elige Q demasiado grande, los pesos persiguen
 cada desviación y el filtro se come la reversión que se quiere operar):
@@ -31,12 +33,11 @@ cada desviación y el filtro se come la reversión que se quiere operar):
     Criterio fijado ANTES de ver resultados (train, después del burn-in de cada q):
       (a) spread estacionario: ADF p < 0.05
       (b) vida media del spread entre 5 y 60 días
-      (c) ningún peso cambia de signo
+      (c) CERO cambios de signo en los pesos
       (d) los pesos siguen adaptándose: al final de train difieren en al menos MIN_ADAPTATION de los que daría el
           filtro con Q = 0 (pesos congelados)
     Si varios q cumplen: el centro de la meseta (la racha contigua más larga de q que cumplen; su valor central).
-    Respaldo (escrito DESPUÉS de ver que ningún q cumple (c), y contado en filter1_params.json): entre los q que
-    cumplen (a), (b) y (d), el de menos cambios de signo (empate: el menor q). El criterio (c) queda NO CUMPLE.
+    Si ninguno cumple, el grupo no tiene q válido (no hay respaldo).
 R = varianza residual de la regresión OLS estática (sin constante, log-precios centrados) en train.
 P_0 = P0_DIFFUSE · I: con el vector normalizado todos los |β_i| <= 1, así que una desviación de 100 es difusa.
 Burn-in: primer día desde el cual la varianza posterior de TODOS los componentes se queda por debajo del techo de su
@@ -68,7 +69,7 @@ LJUNG_BOX_LAGS = 10
 
 
 def observation_design(centered: pd.DataFrame, leg: str) -> tuple[np.ndarray, np.ndarray]:
-    """y_t (pata de normalización) y C_t (las otras 5), ya centrados."""
+    """y_t (pata de normalización) y C_t (las demás patas), ya centrados."""
     return centered[leg].to_numpy(), centered.drop(columns=leg).to_numpy()
 
 
@@ -127,6 +128,11 @@ def weights_from_state(z_prior: np.ndarray, tickers: list[str], leg: str) -> pd.
     return weights[tickers]
 
 
+def sign_changes(weights: np.ndarray) -> np.ndarray:
+    """Cambios de signo de cada peso entre reestimaciones consecutivas."""
+    return (np.diff(np.sign(weights), axis=0) != 0).sum(axis=0)
+
+
 def innovation_diagnostics(innovation: np.ndarray, innovation_var: np.ndarray) -> dict:
     """Varianza y autocorrelación de orden 1 de las innovaciones normalizadas ỹ/√S, y Ljung-Box."""
     normalized = innovation / np.sqrt(innovation_var)
@@ -140,11 +146,10 @@ def evaluate_q(y: np.ndarray, C: np.ndarray, Q: np.ndarray, R: float, z0: np.nda
     result = kalman_filter(y, C, Q, R, z0, P0_DIFFUSE * np.eye(len(z0)))
     burn_in = measure_burn_in(result["posvar"])
     spread = pd.Series(result["innovation"][burn_in:])
-    weights = -result["z_prior"][burn_in:]
     stat, pvalue = adf_test(spread)
     return {"burn_in_days": burn_in, "spread_adf_stat": stat, "spread_adf_pvalue": pvalue,
             "spread_half_life_days": half_life(spread),
-            "sign_changes": int((np.diff(np.sign(weights), axis=0) != 0).sum()),
+            "sign_changes": int(sign_changes(-result["z_prior"][burn_in:]).sum()),
             "adaptation_vs_frozen": float(np.abs(result["z_prior"][-1] - frozen_end).max()),
             **innovation_diagnostics(result["innovation"][burn_in:], result["innovation_var"][burn_in:])}
 
@@ -163,25 +168,42 @@ def q_grid(y: np.ndarray, C: np.ndarray, R: float, z0: np.ndarray) -> pd.DataFra
     ).assign(ok_all=lambda t: t.filter(like="ok_").all(axis=1))
 
 
-def plateau_center(passing: pd.Series) -> int:
-    """Posición central de la racha contigua más larga de valores True."""
+def plateau_center(passing: pd.Series) -> int | None:
+    """Posición central de la racha contigua más larga de valores True; None si no hay ninguno."""
     runs, current = [], []
     for i, ok in enumerate(passing):
         current = current + [i] if ok else []
         if current:
             runs.append(list(current))
+    if not runs:
+        return None
     longest = max(runs, key=len)
     return longest[len(longest) // 2]
 
 
-def select_q(table: pd.DataFrame) -> tuple[pd.Series, bool]:
-    """q elegido y si se usó el respaldo; error si ni siquiera (a), (b) y (d) se cumplen juntos."""
-    if table["ok_all"].any():
-        return table.iloc[plateau_center(table["ok_all"])], False
-    partial = table[table[["ok_a_stationary", "ok_b_half_life", "ok_d_adapts"]].all(axis=1)]
-    if partial.empty:
-        raise RuntimeError("Ningún q cumple (a), (b) y (d); ver filter1_q_grid.csv (no se relajan criterios)")
-    return partial.sort_values(["sign_changes", "q"]).iloc[0], True
+def calibrate_group(log_prices_train: pd.DataFrame, beta: dict, leg: str) -> dict:
+    """Calibra R, la rejilla de q y el burn-in de un grupo con SOLO train; q = None si ningún q cumple (a)-(d)."""
+    tickers = list(log_prices_train.columns)
+    others = [t for t in tickers if t != leg]
+    train_mean = log_prices_train.mean()
+    y, C = observation_design(log_prices_train - train_mean, leg)
+    z0 = -np.array([beta[t] for t in others])
+    R = observation_noise(y, C)
+    grid = q_grid(y, C, R, z0)
+    position = plateau_center(grid["ok_all"])
+    calibration = {"tickers": tickers, "leg": leg, "others": others, "train_mean": train_mean, "z0": z0, "R": R,
+                   "grid": grid, "q": None}
+    if position is None:
+        return calibration
+    q = float(grid.iloc[position]["q"])
+    Q = q * state_noise_base(C, R)
+    result = kalman_filter(y, C, Q, R, z0, P0_DIFFUSE * np.eye(len(z0)))
+    burn_in = measure_burn_in(result["posvar"])
+    calibration.update(q=q, Q=Q, burn_in=burn_in, metrics=grid.iloc[position].to_dict(),
+                       sign_changes_by_asset=dict(zip(others, sign_changes(-result["z_prior"][burn_in:]).tolist())),
+                       posvar_floor=dict(zip(others, np.median(result["posvar"][burn_in:], axis=0).tolist())),
+                       posvar_train=result["posvar"], y=y, C=C)
+    return calibration
 
 
 def p0_robustness(y: np.ndarray, C: np.ndarray, Q: np.ndarray, R: float, z0: np.ndarray, burn_in: int) -> dict:
@@ -213,48 +235,40 @@ def build_outputs(result: dict, centered: pd.DataFrame, leg: str, period: pd.Ser
 
 
 def run() -> None:
-    """Calibra q, R, P_0 y burn-in en train, corre el filtro en toda la muestra y guarda salidas y figuras."""
+    """Calibra en train, corre el filtro hacia adelante en toda la muestra con parámetros congelados y guarda todo."""
     log_prices = np.log(pd.read_csv(PRICES_PATH, index_col="date", parse_dates=True).drop(columns="period"))
     splits = json.loads(SPLITS_PATH.read_text())
     selection = json.loads(SELECTION_PATH.read_text())
     tickers, leg = selection["tickers"], selection["normalization_leg"]
-    others = [t for t in tickers if t != leg]
-    train_mean = slice_period(log_prices[tickers], splits, "train").mean()
-    centered = log_prices[tickers] - train_mean
-    y_train, C_train = observation_design(slice_period(centered, splits, "train"), leg)
+    calibration = calibrate_group(slice_period(log_prices[tickers], splits, "train"), selection["beta"], leg)
+    if calibration["q"] is None:
+        raise RuntimeError("Ningún q cumple (a)-(d) para el grupo final; ver filter1_q_grid.csv (no se relajan criterios)")
+    others, R, Q, z0, burn_in = calibration["others"], calibration["R"], calibration["Q"], calibration["z0"], calibration["burn_in"]
 
-    z0 = -np.array([selection["beta"][t] for t in others])
-    R = observation_noise(y_train, C_train)
-    grid = q_grid(y_train, C_train, R, z0)
-    best, fallback = select_q(grid)
-    Q = best["q"] * state_noise_base(C_train, R)
-
+    centered = log_prices[tickers] - calibration["train_mean"]
     y, C = observation_design(centered, leg)
     result = kalman_filter(y, C, Q, R, z0, P0_DIFFUSE * np.eye(len(z0)))
-    n_train = len(y_train)
-    posvar_train = result["posvar"][:n_train]  # el filtro es causal: estas filas solo usan train
-    burn_in = measure_burn_in(posvar_train)
+    n_train = len(calibration["y"])
     frames = build_outputs(result, centered, leg, assign_period(centered.index, splits), burn_in)
-    band = stable_band(posvar_train)
-    after = slice(burn_in, n_train)
+    grid = calibration["grid"]
     params = {
         "period_used": "train",
-        "state": "z_t = beta_t (5 pesos, sin intercepto); A = I",
+        "state": "z_t = beta_t (pesos sin intercepto); A = I",
         "tickers": tickers, "normalization_leg": leg,
-        "train_mean_log_price": train_mean.to_dict(),
+        "train_mean_log_price": calibration["train_mean"].to_dict(),
         "R": R, "R_daily_std_log": float(np.sqrt(R)),
-        "q_grid_size": len(grid), "q_passing": int(grid["ok_all"].sum()), "q": float(best["q"]),
-        "q_fallback_used": fallback, "fallback_count": int(fallback),
-        "q_fallback_reason": "ningún q cumple (c) sin cambios de signo; se eligió el de menos cambios entre los que cumplen (a), (b) y (d)" if fallback else "",
-        "q_on_grid_edge": bool(best["q"] in (Q_GRID.min(), Q_GRID.max())),
-        "Q_over_R": float(best["Q_over_R"]), "Q_diag": dict(zip(others, np.diag(Q).tolist())),
+        "q_grid_size": len(grid), "q_passing": int(grid["ok_all"].sum()), "q": calibration["q"],
+        "q_on_grid_edge": bool(calibration["q"] in (Q_GRID.min(), Q_GRID.max())), "fallback_count": 0,
+        "Q_over_R": float(calibration["metrics"]["Q_over_R"]), "Q_diag": dict(zip(others, np.diag(Q).tolist())),
         "P0": f"{P0_DIFFUSE:g} · I", "z0": dict(zip(others, z0.tolist())),
-        "burn_in_days": burn_in, "burn_in_end": centered.index[burn_in].strftime("%Y-%m-%d"),
-        "posvar_floor_median_after_burn_in": dict(zip(others, np.median(posvar_train[after], axis=0).tolist())),
-        "posvar_min_train": float(posvar_train.min()),
-        "posvar_band": {"lower": dict(zip(others, band[0].tolist())), "upper": dict(zip(others, band[1].tolist()))},
-        "chosen_q_metrics": {k: (bool(v) if isinstance(v, (bool, np.bool_)) else float(v)) for k, v in best.items()},
-        "p0_robustness": p0_robustness(y_train, C_train, Q, R, z0, burn_in),
+        "burn_in_days": burn_in, "burn_in_share_of_train": burn_in / n_train,
+        "burn_in_end": centered.index[burn_in].strftime("%Y-%m-%d"),
+        "sign_changes_by_asset_train": calibration["sign_changes_by_asset"],
+        "posvar_floor_median_after_burn_in": calibration["posvar_floor"],
+        "posvar_min_train": float(calibration["posvar_train"].min()),
+        "chosen_q_metrics": {k: (bool(v) if isinstance(v, (bool, np.bool_)) else float(v))
+                             for k, v in calibration["metrics"].items()},
+        "p0_robustness": p0_robustness(calibration["y"], calibration["C"], Q, R, z0, burn_in),
     }
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -265,11 +279,10 @@ def run() -> None:
     plot_beta(frames["beta_t"], selection["beta"], splits)
     train_rows = frames["posvar_1"]["period"] == "train"
     plot_filter_diagnostic(frames["posvar_1"].loc[train_rows, others], frames["gain_1"].loc[train_rows, others],
-                           centered.index[burn_in], band, ticker_colors(tickers))
+                           centered.index[burn_in], stable_band(calibration["posvar_train"]), ticker_colors(tickers))
 
     m = params["chosen_q_metrics"]
-    print(f"  q = {params['q']:.2e} ({params['q_passing']} de {len(grid)} cumplen todo; respaldo: {fallback}; "
-          f"orilla de la rejilla: {params['q_on_grid_edge']}); "
-          f"Q/R = {params['Q_over_R']:.2e}; R = {R:.3e}; burn-in = {burn_in} días (train)")
+    print(f"  q = {params['q']:.2e} ({params['q_passing']} de {len(grid)} cumplen (a)-(d); orilla: {params['q_on_grid_edge']}); "
+          f"R = {R:.3e}; burn-in = {burn_in} días ({params['burn_in_share_of_train']:.0%} de train)")
     print(f"  spread (train, tras burn-in): ADF p = {m['spread_adf_pvalue']:.2e}, vida media = "
-          f"{m['spread_half_life_days']:.1f} días, cambios de signo = {int(m['sign_changes'])}")
+          f"{m['spread_half_life_days']:.1f} días, cambios de signo = {sum(params['sign_changes_by_asset_train'].values())}")
