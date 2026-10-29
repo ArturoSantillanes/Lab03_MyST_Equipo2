@@ -1,7 +1,7 @@
 """Etapa 3 del embudo: pre-filtro de Engle-Granger por pares. PRIORIZA, NO ELIMINA.
 
 Dueño: Milca
-Lee: log-precios de train de los subgrupos que pasaron la etapa 2.
+Lee: log-precios de train del sector (los pares se calculan una vez y se reutilizan en cada subgrupo).
 Escribe: (en memoria) número de pares cointegrados, p-value medio y orden de prioridad.
 Reglas: SOLO train. Ningún subgrupo se elimina aquí: todos quedan en la lista ordenada.
 
@@ -23,9 +23,14 @@ def pair_pvalue(log_prices: pd.DataFrame, a: str, b: str) -> float:
     return float(coint(log_prices[a], log_prices[b], trend="c")[1])
 
 
-def group_pair_stats(log_prices: pd.DataFrame, group: tuple) -> dict:
+def pair_pvalues(log_prices: pd.DataFrame) -> dict:
+    """p-value de Engle-Granger de cada par del sector (orden de columnas de data/universe.json)."""
+    return {(a, b): pair_pvalue(log_prices, a, b) for a, b in itertools.combinations(log_prices.columns, 2)}
+
+
+def group_pair_stats(pvalues_by_pair: dict, group: tuple) -> dict:
     """Pares que pasan p < MAX_PVALUE y p-value medio del subgrupo."""
-    pvalues = [pair_pvalue(log_prices, a, b) for a, b in itertools.combinations(group, 2)]
+    pvalues = [pvalues_by_pair[pair] for pair in itertools.combinations(group, 2)]
     return {"eg_pairs_pass": sum(p < MAX_PVALUE for p in pvalues), "eg_pairs_total": len(pvalues),
             "eg_mean_pvalue": sum(pvalues) / len(pvalues)}
 

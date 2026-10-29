@@ -1,28 +1,33 @@
-"""Embudo de selección (etapas 2 a 6) sobre los 84 subgrupos de 6 activos, solo con train.
+"""Embudo de selección (etapas 2 a 7) de un sector sobre todos sus subgrupos de GROUP_SIZE activos, solo con train.
 
 Dueño: Milca
-Lee: log-precios de train.
-Escribe: (en memoria) la tabla de los 84 subgrupos y la descripción del grupo elegido.
-Reglas: SOLO train. Contar todo lo que se prueba.
+Lee: log-precios de train de los activos de un sector.
+Escribe: (en memoria) una fila por subgrupo con etapa alcanzada, estadísticos, decisión y razón, y los detalles
+(Johansen, columnas, sub-ventanas, calibración del filtro 1) de cada subgrupo que llega a Johansen.
+Reglas: SOLO train. Contar todo lo que se prueba. Protocolo v5, fijado en data/universe.json antes de descargar.
 
-Respaldo de la etapa 2 (escrito DESPUÉS de ver que ningún subgrupo pasa la heurística de correlación, y
-contado como respaldo): como la correlación es una heurística y no el criterio definitivo, si ningún subgrupo
-la pasa, la etapa 3 prioriza los 84 y el criterio definitivo sigue siendo Johansen (etapas 4 a 6).
-
-Regla secuencial, fijada antes de ver resultados: se toma el subgrupo con mayor prioridad de Engle-Granger,
-se le aplica Johansen (etapa 4) y se validan sus columnas (etapas 5 y 6). Si no cumple, se pasa al
-siguiente de la lista; se detiene en el primero que cumple. r̂ = 0 o r̂ = n cuentan como "no cumple".
+Etapa 2: correlación de retornos > 0.7 en las 3 sub-ventanas (heurística).
+Etapa 3: Engle-Granger por pares: PRIORIZA (orden de evaluación), no elimina.
+Etapas 4 a 6: Johansen, selección y validación de la columna para TODOS los subgrupos que pasan la etapa 2.
+Respaldo de la etapa 2 (contado como respaldo): si en un sector ningún subgrupo la pasa, todos llegan a Johansen,
+porque la correlación es una heurística y el criterio definitivo es Johansen.
+Etapa 7: estabilidad en sub-ventanas para todo subgrupo que llega a Johansen. A los que cumplen 4 a 6 se les
+calibra además el filtro 1 (rejilla fina de q, meseta, cambios de signo y burn-in).
 """
 import itertools
+import os
+import warnings
+from concurrent.futures import ProcessPoolExecutor
 
 import pandas as pd
 
 from cointegration.correlation import (mean_level_correlation, passes_correlation, rolling_pair_correlations,
                                        subwindow_mean_correlations)
-from cointegration.engle_granger import group_pair_stats, priority_order
-from cointegration.johansen import CRITICAL_VALUES_SOURCE, DETERMINISTIC, johansen_test, rank_alarm, var_lag_orders
-from cointegration.spread_checks import (HALF_LIFE_RANGE, adf_test, choose_column, column_table, half_life, normalize,
-                                         spread_series)
+from cointegration.engle_granger import group_pair_stats, pair_pvalues, priority_order
+from cointegration.johansen import DETERMINISTIC, johansen_test, rank_alarm, var_lag_orders
+from cointegration.spread_checks import HALF_LIFE_RANGE, choose_column, column_table, normalize
+from cointegration.stability import stability_share, stability_windows
+import kalman.filter1_weights as filter1  # módulo completo: evita la importación circular cointegration <-> kalman
 
 GROUP_SIZE = 6
 SIGN_CONVENTION = ("largo el spread = comprar cada activo con β_i > 0 y vender cada activo con β_i < 0, en proporción "
@@ -30,7 +35,7 @@ SIGN_CONVENTION = ("largo el spread = comprar cada activo con β_i > 0 y vender 
 
 
 def correlation_stage(train: pd.DataFrame) -> pd.DataFrame:
-    """Etapa 2 para los C(9,6) subgrupos: correlación media por sub-ventana y si pasa."""
+    """Etapa 2 para los C(n, 6) subgrupos del sector: correlación media por sub-ventana y si pasa."""
     pair_corr = rolling_pair_correlations(train)
     rows = []
     for group in itertools.combinations(train.columns, GROUP_SIZE):
@@ -42,128 +47,84 @@ def correlation_stage(train: pd.DataFrame) -> pd.DataFrame:
 
 
 def stage2_fallback_used(stage2: pd.DataFrame) -> bool:
-    """True si ningún subgrupo pasó la heurística de correlación y la etapa 3 debe priorizar los 84."""
+    """True si ningún subgrupo del sector pasó la heurística de correlación y todos deben llegar a Johansen."""
     return not stage2["stage2_pass"].any()
 
 
 def engle_granger_stage(train: pd.DataFrame, stage2: pd.DataFrame) -> pd.DataFrame:
-    """Etapa 3: estadísticos por pares y orden de prioridad (de los que pasaron la etapa 2, o de los 84 si hay respaldo)."""
+    """Etapa 3: estadísticos por pares y orden de prioridad (de los que pasaron la etapa 2, o de todos si hay respaldo)."""
     candidates = stage2 if stage2_fallback_used(stage2) else stage2[stage2["stage2_pass"]]
-    stats = pd.DataFrame([{"subgroup": s, **group_pair_stats(train, tuple(s.split("-")))} for s in candidates["subgroup"]])
+    pvalues = pair_pvalues(train)
+    stats = pd.DataFrame([{"subgroup": s, **group_pair_stats(pvalues, tuple(s.split("-")))} for s in candidates["subgroup"]])
     return priority_order(stats)
 
 
-def johansen_stage(train: pd.DataFrame, subgroup: str) -> dict:
+def johansen_stage(prices: pd.DataFrame) -> dict:
     """Etapas 4, 5 y 6 para un subgrupo: Johansen, tabla de columnas, columna elegida y validación."""
-    prices = train[subgroup.split("-")]
     lags = var_lag_orders(prices)
     johansen = johansen_test(prices, lags["bic"])
     rank = johansen["rank_trace"]
     alarm = rank_alarm(rank, prices.shape[1])
     columns = column_table(prices, johansen["eigenvectors"], rank)
     chosen = None if alarm else choose_column(columns)
-    return {"subgroup": subgroup, "lags": lags, "johansen": johansen, "alarm": alarm, "columns": columns,
-            "chosen_column": chosen}
+    return {"subgroup": "-".join(prices.columns), "lags": lags, "johansen": johansen, "alarm": alarm,
+            "columns": columns, "chosen_column": chosen}
 
 
-def johansen_row(result: dict) -> dict:
-    """Columnas de la tabla de selección para un subgrupo que llegó a Johansen."""
-    j = result["johansen"]
-    row = {"var_order_aic": result["lags"]["aic"], "var_order_bic": result["lags"]["bic"],
+def johansen_row(stage: dict) -> dict:
+    """Columnas de la tabla para un subgrupo que llegó a Johansen, con su decisión."""
+    j = stage["johansen"]
+    row = {"var_order_aic": stage["lags"]["aic"], "var_order_bic": stage["lags"]["bic"], "deterministic": DETERMINISTIC,
            "rank_trace": j["rank_trace"], "rank_maxeig": j["rank_maxeig"],
            "trace_r0": j["trace_stats"][0], "trace_crit95_r0": j["trace_crit_95"][0],
            "maxeig_r0": j["maxeig_stats"][0], "maxeig_crit95_r0": j["maxeig_crit_95"][0]}
-    if result["chosen_column"] is not None:
-        best = result["columns"].iloc[result["chosen_column"]]
-        row.update(chosen_column=int(best["column"]), adf_stat=best["adf_stat"], adf_pvalue=best["adf_pvalue"],
-                   half_life_days=best["half_life_days"])
-    return row
+    if stage["alarm"]:
+        return {**row, "stage_reached": 4, "decision": "rechazado en Johansen", "reason": stage["alarm"]}
+    if stage["chosen_column"] is None:
+        return {**row, "stage_reached": 6, "decision": "rechazado en validación del spread",
+                "reason": f"ninguna columna dentro de r̂ con ADF p < 0.05 y vida media en {HALF_LIFE_RANGE} días"}
+    best = stage["columns"].iloc[stage["chosen_column"]]
+    return {**row, "chosen_column": int(best["column"]), "adf_stat": best["adf_stat"], "adf_pvalue": best["adf_pvalue"],
+            "half_life_days": best["half_life_days"], "stage_reached": 7, "decision": "cumple etapas 4 a 6",
+            "reason": "Johansen con r̂ válido y spread operable; pasa a estabilidad y filtro 1"}
 
 
-def sequential_johansen(train: pd.DataFrame, priority: pd.DataFrame) -> tuple[dict, dict]:
-    """Recorre la lista de prioridad hasta el primer subgrupo que cumple las etapas 4 a 6."""
-    rows, chosen = {}, None
-    for subgroup in priority["subgroup"]:
-        result = johansen_stage(train, subgroup)
-        row = johansen_row(result)
-        if result["alarm"]:
-            row.update(stage_reached=4, decision="rechazado en Johansen", reason=result["alarm"])
-        elif result["chosen_column"] is None:
-            row.update(stage_reached=6, decision="rechazado en validación del spread",
-                       reason=f"ninguna columna dentro de r̂ con ADF p < 0.05 y vida media en {HALF_LIFE_RANGE} días")
-        else:
-            row.update(stage_reached=6, decision="elegido", reason="primer subgrupo de la lista que cumple etapas 4 a 6")
-            chosen = result
-        rows[subgroup] = row
-        if chosen:
-            break
-    return rows, chosen
+def evaluate_group(prices: pd.DataFrame) -> dict:
+    """Etapas 4 a 7 y calibración del filtro 1 (si cumple 4 a 6) de un subgrupo; train solamente."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        stage = johansen_stage(prices)
+        windows = stability_windows(prices, stage["johansen"]["var_order"])
+        result = {"stage": stage, "windows": windows, "stability_share": stability_share(windows),
+                  "stable_windows": f"{int(windows['stable'].sum())}/{len(windows)}", "beta": None, "calibration": None}
+        if stage["chosen_column"] is not None:
+            beta, leg = normalize(stage["johansen"]["eigenvectors"][:, stage["chosen_column"]])
+            result["beta"] = dict(zip(prices.columns, beta.tolist()))
+            result["calibration"] = filter1.calibrate_group(prices, result["beta"], prices.columns[leg])
+    return result
 
 
-def selection_table(stage2: pd.DataFrame, priority: pd.DataFrame, johansen_rows: dict) -> pd.DataFrame:
-    """Une las etapas en una fila por subgrupo con etapa alcanzada, estadísticos, decisión y razón."""
-    table = stage2.merge(priority, on="subgroup", how="left")
-    defaults = []
-    fallback = stage2_fallback_used(stage2)
-    for _, row in table.iterrows():
-        if not row["stage2_pass"] and not fallback:
-            defaults.append({"stage_reached": 2, "decision": "descartado",
-                             "reason": f"correlación media mínima por sub-ventana {row['corr_min_subwindow']:.3f} <= 0.70"})
-        else:
-            note = " (no pasó la heurística de correlación; priorizado por el respaldo)" if fallback else ""
-            defaults.append({"stage_reached": 3, "decision": "priorizado, no llegó a Johansen",
-                             "reason": "ya se había encontrado un subgrupo que cumple con mayor prioridad" + note})
-    table = pd.concat([table.reset_index(drop=True), pd.DataFrame(defaults)], axis=1)
-    for subgroup, row in johansen_rows.items():
-        for key, value in row.items():
-            table.loc[table["subgroup"] == subgroup, key] = value
-    return table
+def evaluate_groups(train: pd.DataFrame, groups: list[list[str]]) -> list[dict]:
+    """evaluate_group en paralelo (un proceso por núcleo); el resultado no depende del orden ni del número de procesos."""
+    with ProcessPoolExecutor(max_workers=os.cpu_count()) as pool:
+        return list(pool.map(evaluate_group, [train[g] for g in groups], chunksize=4))
 
 
-def describe_selection(chosen: dict, train: pd.DataFrame, n_evaluated: int, n_johansen: int, fallback: bool) -> dict:
-    """Contenido de selected_group.json."""
-    tickers = chosen["subgroup"].split("-")
-    j = chosen["johansen"]
-    raw = j["eigenvectors"][:, chosen["chosen_column"]]
-    beta, leg = normalize(raw)
-    spread = spread_series(train[tickers], beta)
-    stat, pvalue = adf_test(spread)
-    return {
-        "tickers": tickers,
-        "period_used": "train",
-        "price_transform": "log",
-        "n_subgroups_evaluated": n_evaluated,
-        "n_subgroups_reached_johansen": n_johansen,
-        "stage2_fallback_used": fallback,
-        "fallback_count": int(fallback),
-        "var_order": {"aic": chosen["lags"]["aic"], "bic": chosen["lags"]["bic"], "used": j["var_order"],
-                      "used_rule": "BIC (parsimonia; fijado antes de ver resultados)"},
-        "deterministic": DETERMINISTIC,
-        "critical_values_source": CRITICAL_VALUES_SOURCE,
-        "r_hat": j["rank_trace"],
-        "r_hat_maxeig": j["rank_maxeig"],
-        "eigenvalues": j["eigenvalues"],
-        "trace_stats": j["trace_stats"], "trace_crit_95": j["trace_crit_95"], "trace_crit_99": j["trace_crit_99"],
-        "maxeig_stats": j["maxeig_stats"], "maxeig_crit_95": j["maxeig_crit_95"], "maxeig_crit_99": j["maxeig_crit_99"],
-        "beta_columns_raw": [dict(zip(tickers, col.tolist())) for col in j["eigenvectors"].T],
-        "beta_columns_normalized": [dict(zip(tickers, normalize(col)[0].tolist())) for col in j["eigenvectors"].T],
-        "column_table": chosen["columns"].to_dict(orient="records"),
-        "chosen_column": chosen["chosen_column"],
-        "beta": dict(zip(tickers, beta.tolist())),
-        "normalization_leg": tickers[leg],
-        "sign_convention": SIGN_CONVENTION,
-        "adf_stat": stat,
-        "adf_pvalue": pvalue,
-        "half_life_days": half_life(spread),
-    }
-
-
-def run_funnel(train: pd.DataFrame) -> tuple[pd.DataFrame, dict | None]:
-    """Etapas 2 a 6 completas: tabla de los 84 subgrupos y grupo elegido (o None si ninguno cumple)."""
+def run_funnel(train: pd.DataFrame, sector: str) -> tuple[pd.DataFrame, dict]:
+    """Etapas 2 a 7 de un sector: tabla de todos sus subgrupos y detalles de los que llegaron a Johansen."""
     stage2 = correlation_stage(train)
     priority = engle_granger_stage(train, stage2)
-    johansen_rows, chosen = sequential_johansen(train, priority)
-    table = selection_table(stage2, priority, johansen_rows)
     fallback = stage2_fallback_used(stage2)
-    selection = describe_selection(chosen, train, len(table), len(johansen_rows), fallback) if chosen else None
-    return table, selection
+    details = dict(zip(priority["subgroup"], evaluate_groups(train, [s.split("-") for s in priority["subgroup"]])))
+    rows = []
+    for _, row in stage2.merge(priority, on="subgroup", how="left").iterrows():
+        base = {"sector": sector, **row.to_dict(), "stage2_fallback_used": fallback}
+        if row["subgroup"] not in details:
+            rows.append({**base, "stage_reached": 2, "decision": "descartado",
+                         "reason": f"correlación media mínima por sub-ventana {row['corr_min_subwindow']:.3f} <= 0.70"})
+            continue
+        result = details[row["subgroup"]]
+        rows.append({**base, **johansen_row(result["stage"]), "stability_share": result["stability_share"],
+                     "stable_windows": result["stable_windows"]})
+    table = pd.DataFrame(rows).sort_values(["stage_reached", "priority_rank"], ascending=[False, True])
+    return table.reset_index(drop=True), details

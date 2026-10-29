@@ -1,9 +1,11 @@
-"""Figuras del bloque de Milca: 1 (log-precios), 3 (pesos β̂_t), 4 (eigenvector móvil) y diagnóstico del filtro 1.
+"""Figuras del bloque de Milca: 1 (log-precios), 3 (pesos β̂_t), 4 (eigenvector móvil), diagnóstico y rejilla de q.
 
 Dueño: Milca
 Lee: datos y artefactos de data/, cointegration/ y kalman/filter1_weights.py (se los pasan las etapas).
-Escribe: artifacts/figures/fig1_log_precios.png, fig3_beta_t.png, fig4_eigenvector.png, fig_diagnostico_filtro1.png
-Reglas: Título, ejes etiquetados, leyenda legible y fronteras train/test/valid dibujadas y etiquetadas.
+Escribe: artifacts/figures/fig1_log_precios.png, fig3_beta_t.png, fig4_eigenvector.png, fig_diagnostico_filtro1.png,
+         fig_rejilla_q.png
+Reglas: Título, ejes etiquetados, leyenda legible y fronteras train/test/valid dibujadas y etiquetadas (la rejilla de
+q no es una serie de tiempo: su título dice que todo es de train).
 
 Un panel por activo (small multiples): seis líneas encimadas no se leen y las escalas son distintas.
 Cada activo conserva su color en todas las figuras. La ganancia de Kalman se grafica en valor absoluto y escala
@@ -119,8 +121,8 @@ def plot_rolling_eigenvector(eigvec: pd.DataFrame, splits: dict, window_days: in
 
 
 def plot_filter_diagnostic(posvar: pd.DataFrame, gain: pd.DataFrame, burn_in_end: pd.Timestamp, band: np.ndarray,
-                           colors: dict) -> Path:
-    """Diagnóstico (solo train): varianza posterior P_t (escala log) y |K_t| (escala lineal) por componente."""
+                           colors: dict, splits: dict) -> Path:
+    """Diagnóstico: varianza posterior P_t (escala log) y |K_t| (escala lineal) por componente; banda de train."""
     names = list(posvar.columns)
     with plt.rc_context(STYLE):
         fig, axes = plt.subplots(2, len(names), figsize=(3.3 * len(names), 6.5), sharex=True)
@@ -129,23 +131,58 @@ def plot_filter_diagnostic(posvar: pd.DataFrame, gain: pd.DataFrame, burn_in_end
             top.axhspan(band[0, i], band[1, i], color=SHADE, linewidth=0)
             top.plot(posvar.index, posvar[name], color=colors[name], linewidth=1.0)
             top.set_yscale("log")
-            top.set_title(f"β {name.upper()}")
             after = gain.loc[gain.index > burn_in_end, name].abs()
             bottom.plot(gain.index, gain[name].abs(), color=colors[name], linewidth=0.6)
             bottom.set_ylim(0, 1.15 * after.max())
             bottom.text(0.98, 0.97, f"máx. en burn-in: {gain[name].abs().max():.2g}", transform=bottom.transAxes,
                         ha="right", va="top", fontsize=7, color=MUTED)
             for ax in (top, bottom):
-                ax.axvline(burn_in_end, color=MUTED, linestyle="--", linewidth=0.9)
-                ax.xaxis.set_major_locator(mdates.YearLocator(2))
-                ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+                ax.axvline(burn_in_end, color=INK, linestyle="-.", linewidth=0.9)
+                mark_periods(ax, posvar.index, splits)
+                ax.xaxis.set_major_locator(mdates.YearLocator(4))
+            top.set_title(f"β {name.upper()}", pad=14)
             bottom.set_xlabel("fecha")
         axes[0, 0].set_ylabel("P_t|t (escala log)")
         axes[1, 0].set_ylabel("|K_t| (escala lineal)")
-        fig.suptitle("Diagnóstico del filtro de Kalman 1 (train): P_t baja hasta su piso y K_t se estabiliza",
-                     fontweight="bold")
-        fig.legend(handles=[Patch(color=SHADE, label="banda estable de P_t (train)"),
-                            Line2D([], [], color=MUTED, linestyle="--", linewidth=0.9, label="fin del burn-in")],
-                   loc="lower center", ncol=2, bbox_to_anchor=(0.5, -0.03))
+        fig.suptitle("Diagnóstico del filtro de Kalman 1 (train, test, valid): P_t baja hasta un piso > 0 y K_t se "
+                     "estabiliza", fontweight="bold")
+        fig.legend(handles=[Patch(color=SHADE, label="banda estable de P_t (medida en train)"),
+                            Line2D([], [], color=INK, linestyle="-.", linewidth=0.9, label="fin del burn-in (train)"),
+                            boundary_handle()],
+                   loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.03))
         fig.tight_layout(rect=(0, 0.04, 1, 1))
     return save(fig, "fig_diagnostico_filtro1.png")
+
+
+def plot_q_grid(grid: pd.DataFrame, q_chosen: float, plateau_range: tuple, min_points: int) -> Path:
+    """Criterios (a)-(d) del filtro 1 en función de q (train), con la región válida y el q elegido."""
+    fine, ultrafine = grid[grid["resolution"] == "fina"], grid[grid["resolution"] == "ultrafina"]
+    panels = [("spread_adf_pvalue", "(a) ADF p del spread de Kalman", 0.05, "umbral p = 0.05"),
+              ("spread_half_life_days", "(b) vida media (días)", (5, 60), "rango 5-60 días"),
+              ("sign_changes", "(c) cambios de signo en train", 0, "objetivo: 0"),
+              ("adaptation_vs_frozen", "(d) adaptación contra Q = 0", 0.05, "mínimo 0.05")]
+    with plt.rc_context(STYLE):
+        fig, axes = plt.subplots(2, 2, figsize=(12, 7), sharex=True)
+        for ax, (column, label, target, target_label) in zip(axes.flat, panels):
+            ax.plot(fine["q"], fine[column], color=SERIES_COLORS[0], marker="o", markersize=2.5, linewidth=0.9,
+                    label="rejilla fina (20 por década)")
+            if not ultrafine.empty:
+                ax.plot(ultrafine["q"], ultrafine[column], color=SERIES_COLORS[1], marker=".", markersize=2,
+                        linewidth=0, label="rejilla ultrafina (100 por década)")
+            valid = fine[fine["ok_all"]]
+            ax.scatter(valid["q"], valid[column], color=SERIES_COLORS[2], s=22, zorder=3, label="q que cumple (a)-(d)")
+            if isinstance(target, tuple):
+                ax.axhspan(*target, color=SHADE, linewidth=0, label=target_label)
+            else:
+                ax.axhline(target, color=MUTED, linestyle=":", linewidth=1.0, label=target_label)
+            ax.axvspan(*plateau_range, color=SERIES_COLORS[2], alpha=0.12, linewidth=0)
+            ax.axvline(q_chosen, color=INK, linestyle="--", linewidth=0.9)
+            ax.set_xscale("log")
+            ax.set_title(label)
+            ax.set_xlabel("q (Q = q · Q_base, escala log)")
+            ax.set_ylabel(label.split(") ")[1])
+            ax.legend(fontsize=7, loc="best")
+        fig.suptitle(f"Rejilla de q del filtro de Kalman 1 (train): racha válida más larga sombreada; meseta = al menos "
+                     f"{min_points} q contiguos; línea punteada = q elegido ({q_chosen:.2e})", fontweight="bold")
+        fig.tight_layout()
+    return save(fig, "fig_rejilla_q.png")
