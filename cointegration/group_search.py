@@ -17,7 +17,8 @@ import itertools
 
 import pandas as pd
 
-from cointegration.correlation import passes_correlation, rolling_pair_correlations, subwindow_mean_correlations
+from cointegration.correlation import (mean_level_correlation, passes_correlation, rolling_pair_correlations,
+                                       subwindow_mean_correlations)
 from cointegration.engle_granger import group_pair_stats, priority_order
 from cointegration.johansen import CRITICAL_VALUES_SOURCE, DETERMINISTIC, johansen_test, rank_alarm, var_lag_orders
 from cointegration.spread_checks import (HALF_LIFE_RANGE, adf_test, choose_column, column_table, half_life, normalize,
@@ -35,7 +36,8 @@ def correlation_stage(train: pd.DataFrame) -> pd.DataFrame:
     for group in itertools.combinations(train.columns, GROUP_SIZE):
         corr = subwindow_mean_correlations(group, pair_corr)
         rows.append({"subgroup": "-".join(group), **{f"corr_subwindow_{i + 1}": c for i, c in enumerate(corr)},
-                     "corr_min_subwindow": min(corr), "stage2_pass": passes_correlation(corr)})
+                     "corr_min_subwindow": min(corr), "stage2_pass": passes_correlation(corr),
+                     "info_corr_log_levels": mean_level_correlation(group, train)})
     return pd.DataFrame(rows)
 
 
@@ -60,7 +62,8 @@ def johansen_stage(train: pd.DataFrame, subgroup: str) -> dict:
     alarm = rank_alarm(rank, prices.shape[1])
     columns = column_table(prices, johansen["eigenvectors"], rank)
     chosen = None if alarm else choose_column(columns)
-    return {"lags": lags, "johansen": johansen, "alarm": alarm, "columns": columns, "chosen_column": chosen}
+    return {"subgroup": subgroup, "lags": lags, "johansen": johansen, "alarm": alarm, "columns": columns,
+            "chosen_column": chosen}
 
 
 def johansen_row(result: dict) -> dict:
@@ -90,7 +93,7 @@ def sequential_johansen(train: pd.DataFrame, priority: pd.DataFrame) -> tuple[di
                        reason=f"ninguna columna dentro de r̂ con ADF p < 0.05 y vida media en {HALF_LIFE_RANGE} días")
         else:
             row.update(stage_reached=6, decision="elegido", reason="primer subgrupo de la lista que cumple etapas 4 a 6")
-            chosen = {"subgroup": subgroup, **result}
+            chosen = result
         rows[subgroup] = row
         if chosen:
             break
