@@ -1,12 +1,12 @@
-"""Descarga los precios diarios ajustados del universo de candidatos y los congela.
+"""Descarga los precios diarios ajustados de cada sector candidato y los congela (un archivo por sector).
 
 Dueño: Milca
-Lee: Yahoo Finance (librería yfinance), solo si no existe la descarga congelada.
-Escribe: data/raw/prices_raw.csv y data/raw/download_meta.json
+Lee: Yahoo Finance (librería yfinance), solo si no existe la descarga congelada del sector.
+Escribe: data/raw/<sector>.csv y data/raw/<sector>_meta.json
 Reglas: Ventana de 10 a 15 años (data/universe.json). Registrar fecha de descarga y fuente.
 
-Se usa el cierre ajustado por dividendos y splits (auto_adjust=True). La descarga se hace
-una sola vez; después el pipeline lee el archivo congelado y no necesita internet ni yfinance.
+Se usa el cierre ajustado por dividendos y splits (auto_adjust=True). Cada sector se descarga una sola vez;
+después el pipeline lee el archivo congelado y no necesita internet ni yfinance.
 """
 import json
 import warnings
@@ -15,9 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-RAW_DIR = Path(__file__).resolve().parent / "raw"
-RAW_PRICES_PATH = RAW_DIR / "prices_raw.csv"
-RAW_META_PATH = RAW_DIR / "download_meta.json"
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def download_prices(tickers: list[str], start: str, end: str) -> pd.DataFrame:
@@ -35,13 +33,13 @@ def download_prices(tickers: list[str], start: str, end: str) -> pd.DataFrame:
     return close
 
 
-def freeze(prices: pd.DataFrame, start: str, end: str) -> None:
+def freeze(prices: pd.DataFrame, raw_path: Path, start: str, end: str) -> None:
     """Guarda la descarga y su registro (fuente, fecha, ventana, versión de yfinance)."""
     import yfinance as yf
 
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
-    prices.to_csv(RAW_PRICES_PATH, date_format="%Y-%m-%d")
-    RAW_META_PATH.write_text(json.dumps({
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    prices.to_csv(raw_path, date_format="%Y-%m-%d")
+    raw_path.with_name(f"{raw_path.stem}_meta.json").write_text(json.dumps({
         "source": "Yahoo Finance (yfinance), cierre ajustado por dividendos y splits",
         "yfinance_version": yf.__version__,
         "downloaded_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -51,8 +49,9 @@ def freeze(prices: pd.DataFrame, start: str, end: str) -> None:
     }, indent=2))
 
 
-def load_or_download(tickers: list[str], start: str, end: str) -> pd.DataFrame:
-    """Lee la descarga congelada; si no existe, descarga y congela."""
-    if not RAW_PRICES_PATH.exists():
-        freeze(download_prices(tickers, start, end), start, end)
-    return pd.read_csv(RAW_PRICES_PATH, index_col="date", parse_dates=True)
+def load_or_download(tickers: list[str], raw_file: str, start: str, end: str) -> pd.DataFrame:
+    """Lee la descarga congelada del sector; si no existe, descarga y congela."""
+    raw_path = ROOT / raw_file
+    if not raw_path.exists():
+        freeze(download_prices(tickers, start, end), raw_path, start, end)
+    return pd.read_csv(raw_path, index_col="date", parse_dates=True)

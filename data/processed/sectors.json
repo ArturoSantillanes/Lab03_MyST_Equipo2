@@ -1,0 +1,122 @@
+{
+  "oro": {
+    "tickers": [
+      "nem",
+      "aem",
+      "kgc",
+      "au",
+      "gfi",
+      "hmy",
+      "fnv",
+      "wpm",
+      "rgld"
+    ],
+    "excluded": {}
+  },
+  "bancos_grandes": {
+    "tickers": [
+      "jpm",
+      "bac",
+      "c",
+      "wfc",
+      "usb",
+      "pnc",
+      "gs",
+      "ms",
+      "stt"
+    ],
+    "excluded": {
+      "bk": "sin datos"
+    }
+  },
+  "bancos_regionales": {
+    "tickers": [
+      "key",
+      "rf",
+      "fitb",
+      "hban",
+      "mtb",
+      "zion",
+      "tfc",
+      "fhn"
+    ],
+    "excluded": {
+      "cma": "sin datos",
+      "snv": "sin datos"
+    }
+  },
+  "aseguradoras": {
+    "tickers": [
+      "trv",
+      "cb",
+      "all",
+      "pgr",
+      "hig",
+      "cinf",
+      "wrb",
+      "l",
+      "afg",
+      "aig"
+    ],
+    "excluded": {}
+  },
+  "electricas": {
+    "tickers": [
+      "duk",
+      "so",
+      "aep",
+      "xel",
+      "ed",
+      "wec",
+      "es",
+      "cms",
+      "dte",
+      "aee"
+    ],
+    "excluded": {}
+  },
+  "petroleras_integradas": {
+    "tickers": [
+      "xom",
+      "cvx",
+      "bp",
+      "shel",
+      "tte",
+      "e",
+      "eqnr",
+      "su",
+      "imo"
+    ],
+    "excluded": {}
+  },
+  "semiconductores": {
+    "tickers": [
+      "amat",
+      "lrcx",
+      "klac",
+      "txn",
+      "adi",
+      "mchp",
+      "nxpi",
+      "intc",
+      "qcom",
+      "mu"
+    ],
+    "excluded": {}
+  },
+  "constructoras_vivienda": {
+    "tickers": [
+      "dhi",
+      "len",
+      "phm",
+      "tol",
+      "nvr",
+      "kbh",
+      "mth",
+      "mho"
+    ],
+    "excluded": {
+      "bzh": "sin datos"
+    }
+  }
+}

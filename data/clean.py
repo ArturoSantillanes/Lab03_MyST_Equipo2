@@ -1,11 +1,13 @@
 """Valida y limpia los precios: faltantes, duplicados, saltos anómalos y fechas desalineadas.
 
 Dueño: Milca
-Lee: data/raw/prices_raw.csv
+Lee: data/raw/<sector>.csv (los sectores del preregistro, unidos por fecha)
 Escribe: (en memoria) precios limpios y un reporte con el conteo de cada caso.
 Reglas: Reportar cuántos datos se encontraron y cómo se resolvió cada caso. No inventar precios.
 
 Reglas de resolución:
+    historia incompleta    -> un ticker al que le falta más de MAX_MISSING_SHARE de los días o que empieza después
+                              de la primera semana (MAX_LATE_START_DAYS) se excluye SIN reemplazo (regla del preregistro)
     fechas duplicadas      -> se conserva la primera aparición y se descartan las demás
     precios no positivos   -> se tratan como faltantes (son errores de datos)
     fechas desalineadas    -> fechas en que algún activo no tiene precio y otros sí: se descarta la fecha
@@ -21,6 +23,23 @@ import pandas as pd
 JUMP_THRESHOLD = 0.40
 REVERSAL_SHARE = 0.5
 MIN_YEARS, MAX_YEARS = 10, 15
+MAX_MISSING_SHARE = 0.01
+MAX_LATE_START_DAYS = 7
+
+
+def incomplete_tickers(raw: pd.DataFrame) -> dict:
+    """Tickers sin historia completa en la ventana, con la razón (se excluyen sin reemplazo)."""
+    reasons = {}
+    first_day = raw.index.min()
+    for ticker in raw.columns:
+        series = raw[ticker]
+        if series.first_valid_index() is None:
+            reasons[ticker] = "sin datos"
+        elif (series.first_valid_index() - first_day).days > MAX_LATE_START_DAYS:
+            reasons[ticker] = f"empieza el {series.first_valid_index():%Y-%m-%d}"
+        elif series.isna().mean() > MAX_MISSING_SHARE:
+            reasons[ticker] = f"le falta el {series.isna().mean():.1%} de los días"
+    return reasons
 
 
 def standardize(raw: pd.DataFrame) -> pd.DataFrame:
