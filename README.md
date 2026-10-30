@@ -10,7 +10,7 @@ Microestructuras y Sistemas de Trading (MyST) · ITESO · Equipo 2
 
 ## Nivel de alcance
 
-**Nivel A:** un grupo de 6 activos cointegrados. El tamaño del grupo se justifica como 2·n, con n = 3 integrantes.
+Se desarrolla todo el enunciado salvo la sección 3.7 (Risk Parity entre varios grupos): un grupo de 6 activos cointegrados. El tamaño del grupo se justifica como 2·n, con n = 3 integrantes.
 
 ## Descripción del proyecto
 
@@ -85,6 +85,6 @@ pytest
 
 Resumen por persona; el detalle (qué generó la IA y cómo se verificó) está en [project_management/ia_log.md](project_management/ia_log.md).
 
-- **Milca:** usó IA en `data/`, `cointegration/` y `kalman/filter1_weights.py`; revisó, probó y entendió su código.
-- **Arturo:** usó IA en el armado del repositorio, `project_management/`, `kalman/filter2_spread.py` y `strategy/` (vecm, zscore, signals); revisó, probó y entendió su código.
+- **Milca:** usó IA (Claude Code) en `data/` (incluye el preregistro de sectores `data/universe.json`), `cointegration/` (embudo de 7 etapas por sector, selección final con los requisitos R1-R7 y figuras 1, 3, 4, de diagnóstico y de la rejilla de q), `kalman/filter1_weights.py`, sus pruebas (`test_split`, `test_cointegration`, `test_beta_stability`, `test_filter1_step`), `project_management/handoff_milca.md` y `docs/secciones/milca.md`; revisó, probó y entendió su código.
+- **Arturo:** usó IA (Claude Code) en el armado del repositorio y `project_management/` (incluye `pytest.ini`, charter, sprints y `handoff_arturo.md`), `kalman/filter2_spread.py` (filtro 2), `strategy/` (`vecm.py`, `zscore.py`, `signals.py`, `figures.py` con las figuras 2, 5 y 6), sus pruebas (`test_causality`, `test_innovations`, `test_signals`, `test_filter2_step`) y `docs/secciones/arturo.md`; revisó, probó y entendió su código.
 - **Paula:** usó IA en `strategy/sizing.py`, `backtest/`, `performance/` y `dashboard/`; revisó, probó y entendió su código.
