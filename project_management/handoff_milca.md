@@ -10,8 +10,16 @@ python -m pytest            # mis 4 archivos de prueba: 13 casos, todos pasan
 ```
 
 - Python 3.12 con `requirements.txt`. Las descargas están congeladas en `data/raw/<sector>.csv`, así que no hace falta internet.
-- Mis etapas tardan unos **6.5 minutos**. `cointegration` evalúa 910 grupos de 8 sectores, en paralelo con un proceso por núcleo, y el resultado no depende del número de núcleos. Dos corridas desde cero dieron artefactos idénticos byte por byte.
-
+- Mis etapas tardan unos **6.5 minutos** en una Mac M2 de 8 núcleos (`cointegration` midió 379 s y 431 s de cómputo activo el 2026-10-30). `cointegration` evalúa 910 grupos de 8 sectores, en paralelo con un proceso por núcleo, y el resultado no depende del número de núcleos. Dos corridas desde cero dieron artefactos idénticos byte por byte.
+- **Tiempo esperado de `cointegration`:**
+  - **Mac M2 (8 núcleos): unos 6.5 minutos.**
+  - **Windows 11 (8 núcleos, máquina de Arturo): unos 50 minutos** (3,006 s).
+  - El 90% del tiempo es la rejilla de q de cada grupo: el filtro de Kalman y las pruebas ADF, que son regresiones de álgebra lineal (BLAS).
+  - **Causa probable de la diferencia, todavía sin comprobar en Windows:** sobresuscripción de hilos.
+    - En Mac, numpy usa Accelerate de Apple.
+    - En Windows, numpy usa OpenBLAS, que abre por su cuenta un hilo por núcleo. Con 8 procesos en paralelo quedan unos 64 hilos peleando por 8 núcleos, y los hilos de OpenBLAS esperan activamente, gastando CPU sin avanzar.
+    - El arranque "spawn" de Windows (cada proceso hijo vuelve a importar las librerías, en 9 grupos de procesos) suma segundos, no decenas de minutos.
+  - Si la computadora se suspende a media corrida (laptop con batería o tapa cerrada), el tiempo de reloj se dispara aunque el cálculo no cambie. Corran `python main.py` conectados a la corriente y sin suspender.
 **Pendiente para Arturo (estructura del repo; yo no toco esos archivos):**
 1. Crear `pytest.ini` en la raíz para que también funcione `pytest` a secas, con exactamente:
    ```
@@ -143,3 +151,5 @@ El filtro y el eigenvector móvil se **corren** hacia adelante en toda la muestr
 3. Las 3 sub-ventanas inestables están al final de train: posible pérdida de cointegración en test o valid.
 4. CMS pesa 4.7% y su signo en Kalman difiere del de Johansen.
 5. Las innovaciones del filtro 1 están autocorrelacionadas (0.967), porque son el spread que revierte. La prueba de innovaciones blancas aplica al filtro 2.
+6. **Tiempo en Windows:** `cointegration` tarda unos 50 minutos en Windows contra 6.5 en Mac. Para comprobar la causa sin tocar código, se puede correr en PowerShell `$env:OPENBLAS_NUM_THREADS="1"; python main.py`, que deja un hilo de BLAS por proceso, y revisar con `git diff --stat artifacts/` que las cifras no cambian más que en ruido de punto flotante. Hay dos opciones para acelerarlo sin cambiar resultados, todavía sin aplicar: fijar un hilo de BLAS por proceso dentro del código, o reusar la etapa si sus entradas no cambiaron.
+7. **Codificación:** todas mis lecturas y escrituras de texto usan `encoding="utf-8"` y lo que imprimo es ASCII. Se verificó con `python -X warn_default_encoding` y con la consola forzada a cp1252.

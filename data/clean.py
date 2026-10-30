@@ -94,7 +94,7 @@ def validate(prices: pd.DataFrame) -> None:
         raise ValueError("Las fechas no son estrictamente crecientes")
     years = (prices.index[-1] - prices.index[0]).days / 365.25
     if not MIN_YEARS - 0.05 <= years <= MAX_YEARS + 0.05:
-        raise ValueError(f"La muestra cubre {years:.2f} años; se piden de {MIN_YEARS} a {MAX_YEARS}")
+        raise ValueError(f"La muestra cubre {years:.2f} anios; se piden de {MIN_YEARS} a {MAX_YEARS}")
 
 
 def clean_prices(raw: pd.DataFrame) -> tuple[pd.DataFrame, dict]:

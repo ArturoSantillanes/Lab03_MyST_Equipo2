@@ -46,14 +46,14 @@ def run() -> None:
     splits = compute_splits(prices.index)
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-    prices.assign(period=assign_period(prices.index, splits)).to_csv(PRICES_PATH, date_format="%Y-%m-%d")
-    SECTORS_PATH.write_text(json.dumps(membership, indent=2, ensure_ascii=False))
-    SPLITS_PATH.write_text(json.dumps(splits, indent=2))
-    REPORT_PATH.write_text(json.dumps(report, indent=2, ensure_ascii=False))
+    prices.assign(period=assign_period(prices.index, splits)).to_csv(PRICES_PATH, date_format="%Y-%m-%d", encoding="utf-8")
+    SECTORS_PATH.write_text(json.dumps(membership, indent=2, ensure_ascii=False), encoding="utf-8")
+    SPLITS_PATH.write_text(json.dumps(splits, indent=2), encoding="utf-8")
+    REPORT_PATH.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    print(f"  {len(membership)} sectores, {len(prices.columns)} activos, {len(prices)} días ({report['start']} a "
+    print(f"  {len(membership)} sectores, {len(prices.columns)} activos, {len(prices)} dias ({report['start']} a "
           f"{report['end']}); excluidos {report['excluded_tickers'] or 'ninguno'}; duplicados {report['duplicate_dates']}, "
           f"desalineadas {report['misaligned_dates']}, saltos marcados {report['anomalous_jumps_count']} "
           f"(posibles errores {report['possible_data_errors_count']})")
     for name in ("train", "test", "valid"):
-        print(f"  {name}: {splits[name]['start']} a {splits[name]['end']} ({splits[name]['n_obs']} días)")
+        print(f"  {name}: {splits[name]['start']} a {splits[name]['end']} ({splits[name]['n_obs']} dias)")

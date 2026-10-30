@@ -15,7 +15,7 @@ UNIVERSE_PATH = Path(__file__).resolve().parent.parent / "data" / "universe.json
 
 def load_universe(path: Path = UNIVERSE_PATH) -> dict:
     """Lee el archivo de configuración del universo."""
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def sector_tickers(sector: dict) -> list[str]:

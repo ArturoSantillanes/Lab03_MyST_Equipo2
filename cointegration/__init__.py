@@ -60,9 +60,9 @@ def multiple_testing(membership: dict, funnel: pd.DataFrame, candidates: pd.Data
 
 def run() -> None:
     """Embudo por sector y selección final en train; guarda tablas, grupo ganador, estabilidad, eigenvector y figuras."""
-    log_prices = np.log(pd.read_csv(PRICES_PATH, index_col="date", parse_dates=True).drop(columns="period"))
-    splits = json.loads(SPLITS_PATH.read_text())
-    membership = {s: m["tickers"] for s, m in json.loads(SECTORS_PATH.read_text()).items()}
+    log_prices = np.log(pd.read_csv(PRICES_PATH, index_col="date", parse_dates=True, encoding="utf-8").drop(columns="period"))
+    splits = json.loads(SPLITS_PATH.read_text(encoding="utf-8"))
+    membership = {s: m["tickers"] for s, m in json.loads(SECTORS_PATH.read_text(encoding="utf-8")).items()}
     train = slice_period(log_prices, splits, "train")
 
     tables, funnel_details = [], {}
@@ -70,12 +70,12 @@ def run() -> None:
         table, details = run_funnel(train[tickers], sector)
         tables.append(table)
         funnel_details.update(details)
-        print(f"  {sector}: {len(table)} subgrupos, {int(table['stage2_pass'].sum())} pasan correlación, "
+        print(f"  {sector}: {len(table)} subgrupos, {int(table['stage2_pass'].sum())} pasan correlacion, "
               f"{int((table['stage_reached'] >= 4).sum())} llegan a Johansen, {int((table['stage_reached'] == 7).sum())} cumplen 4 a 6")
     funnel = pd.concat(tables, ignore_index=True)
     candidates, winner, details, results = run_final_selection(train, membership, funnel_details)
     if not winner["R2"] or details["stage"]["chosen_column"] is None or details["calibration"]["q"] is None:
-        raise RuntimeError("El mejor grupo no tiene vector válido o q válido; ver candidatos_final.csv (no se relaja nada)")
+        raise RuntimeError("El mejor grupo no tiene vector valido o q valido; ver candidatos_final.csv (no se relaja nada)")
 
     q_grids = q_grids_table(results)
     history = load_universe()["preregistration"]["previously_tested"]["historial_total_grupos_antes_de_v5"]
@@ -92,19 +92,20 @@ def run() -> None:
                                        np.array([selection["beta"][t] for t in tickers]))
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    funnel.to_csv(OUT_DIR / "group_selection.csv", index=False)
-    candidates.to_csv(OUT_DIR / "candidatos_final.csv", index=False)
-    q_grids.to_csv(OUT_DIR / "q_grids_candidatos.csv", index=False)
-    (OUT_DIR / "selected_group.json").write_text(json.dumps(selection, indent=2, ensure_ascii=False))
-    details["windows"].to_csv(OUT_DIR / "stability_windows.csv", index=False)
-    eigvec.assign(period=assign_period(eigvec.index, splits)).to_csv(OUT_DIR / "eigvec_rolling.csv", date_format="%Y-%m-%d")
+    funnel.to_csv(OUT_DIR / "group_selection.csv", index=False, encoding="utf-8")
+    candidates.to_csv(OUT_DIR / "candidatos_final.csv", index=False, encoding="utf-8")
+    q_grids.to_csv(OUT_DIR / "q_grids_candidatos.csv", index=False, encoding="utf-8")
+    (OUT_DIR / "selected_group.json").write_text(json.dumps(selection, indent=2, ensure_ascii=False), encoding="utf-8")
+    details["windows"].to_csv(OUT_DIR / "stability_windows.csv", index=False, encoding="utf-8")
+    eigvec.assign(period=assign_period(eigvec.index, splits)).to_csv(
+        OUT_DIR / "eigvec_rolling.csv", date_format="%Y-%m-%d", encoding="utf-8")
     plot_log_prices(log_prices[tickers], splits)
     plot_rolling_eigenvector(eigvec, splits, EIGVEC_WINDOW)
 
     mt = selection["multiple_testing"]
-    print(f"  selección final: {len(candidates)} grupos evaluados, {selection['n_eligible']} elegibles; ganador {tickers} "
+    print(f"  seleccion final: {len(candidates)} grupos evaluados, {selection['n_eligible']} elegibles; ganador {tickers} "
           f"({selection['sector']}, {selection['n_requirements']}/7 requisitos)")
-    print(f"  ganador (train): r̂ = {selection['r_hat']} / {selection['r_hat_maxeig']}; ADF p = {selection['adf_pvalue']:.2e}; "
-          f"vida media = {selection['half_life_days']:.1f} días; estabilidad {selection['stable_windows']}")
+    print(f"  ganador (train): r_hat = {selection['r_hat']} / {selection['r_hat_maxeig']}; ADF p = {selection['adf_pvalue']:.2e}; "
+          f"vida media = {selection['half_life_days']:.1f} dias; estabilidad {selection['stable_windows']}")
     print(f"  pruebas: {mt['groups_v5']} grupos en v5 ({mt['groups_all_versions']} con versiones anteriores), "
           f"{mt['johansen_tests_train']} Johansen en train, {mt['q_configurations']} configuraciones de q")
