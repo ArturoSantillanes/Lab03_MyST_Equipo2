@@ -119,7 +119,7 @@ Resultado:
 ### 1.4 Ganancia de Kalman: cálculo e interpretación
 
 K_t = P_{t|t−1}·C / (C·P_{t|t−1}·C + R) indica qué fracción de la sorpresa del día se cree:
-- **Media μ (K_μ):** empieza en 0.42 y, después del burn-in, oscila entre 0.002 y 0.28, con promedio 0.058. Sube cuando la varianza estimada baja, porque R_t es menor y se confía más en el dato, y cae en marzo de 2020, cuando σ̂² se dispara. La media se mueve como máximo C_μ·K_μ ≈ 0.15% de cada sorpresa: μ es casi un ancla.
+- **Media μ (K_μ):** empieza en 0.42 y, después del burn-in, oscila entre 0.002 y 0.28, con promedio 0.058. Sube cuando la varianza estimada baja, porque R_t es menor y se confía más en el dato, y cae en marzo de 2020, cuando σ̂² se dispara. Medida en unidades de μ, la media se mueve C_μ·K_μ de cada sorpresa: 0.16% en promedio y 0.75% como máximo. μ es casi un ancla.
 - **Varianza σ² (K_σ):** C_σ y R_σ son constantes, así que la ganancia converge a un estado estacionario: K_σ = 0.638, o sea C_σ·K_σ = 4.2% de cada medición nueva. Equivale a una memoria de unos 24 días hábiles. Por eso en la figura 5 es una línea plana después de unas semanas.
 - La figura 5 grafica |K_t| de los 5 pesos del filtro 1 y de μ y σ² del filtro 2, en escala **lineal**.
 
@@ -345,7 +345,7 @@ Todas tienen título, ejes etiquetados, leyenda, fronteras train/test/valid dibu
 2. **Posible ruptura de la cointegración (heredado de Milca):** las 3 sub-ventanas inestables son las últimas de train. Hay señales fuera de muestra:
    - las innovaciones del filtro 2 empeoran en valid (varianza 1.39, Ljung-Box p = 0.027);
    - en marzo de 2024 (valid) el z llega a −3.9;
-   - en 2020 (test) σ̂ se triplica (la σ̂ promedio pasa de 0.014 en train a 0.030 en test). La banda se abre y casi no hay señales durante el choque del COVID.
+   - en 2020 (test) la σ̂ promedio se duplica (de 0.014 en train a 0.030 en test). La banda se abre y casi no hay señales durante el choque del COVID.
 3. **q_μ está débilmente identificado:** la verosimilitud es plana en [0, 10⁻²], y la desviación estándar de z va de 1.02 a 0.40 dentro de esa región. Se respetó la regla de máxima verosimilitud.
 4. **El orden del AR (p = 6) salió de una regla Box-Jenkins** que se escribió después de ver que el AR(1) del BIC dejaba autocorrelación de orden 1 (−0.066) en train. Se declara arriba.
 5. **El burn-in total es largo:** se puede operar en train solo desde el 2015-05-21 (1,161 de 2,263 días). Con los valores por defecto hay apenas 6 operaciones en train: 5 cortas y 1 larga.
