@@ -1,0 +1,58 @@
+{
+  "period": "train",
+  "corr_z_vs_next_day_spread_return": -0.07748026013244036,
+  "train_trades": 6,
+  "train_trades_with_positive_gross": 5,
+  "train_gross_log_return_rule": 0.030564615598756346,
+  "train_gross_log_return_reversed_signs": -0.030564615598756346,
+  "trades": [
+    {
+      "entry": "2015-09-18",
+      "exit": "2015-10-14",
+      "direction": 1,
+      "days": 18,
+      "exit_reason": "senal",
+      "gross_log_return": 0.010644263147767064
+    },
+    {
+      "entry": "2017-05-16",
+      "exit": "2017-06-29",
+      "direction": -1,
+      "days": 31,
+      "exit_reason": "tenencia_maxima",
+      "gross_log_return": 0.00043204042258451064
+    },
+    {
+      "entry": "2017-07-20",
+      "exit": "2017-09-01",
+      "direction": -1,
+      "days": 31,
+      "exit_reason": "tenencia_maxima",
+      "gross_log_return": -0.002992294194459044
+    },
+    {
+      "entry": "2017-09-05",
+      "exit": "2017-09-25",
+      "direction": -1,
+      "days": 14,
+      "exit_reason": "senal",
+      "gross_log_return": 0.006599763352525285
+    },
+    {
+      "entry": "2018-10-30",
+      "exit": "2018-12-12",
+      "direction": -1,
+      "days": 29,
+      "exit_reason": "senal",
+      "gross_log_return": 0.005988765430186992
+    },
+    {
+      "entry": "2019-08-28",
+      "exit": "2019-09-09",
+      "direction": -1,
+      "days": 7,
+      "exit_reason": "senal",
+      "gross_log_return": 0.009892077440151538
+    }
+  ]
+}
