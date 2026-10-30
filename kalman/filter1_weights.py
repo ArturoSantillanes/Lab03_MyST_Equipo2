@@ -254,13 +254,13 @@ def build_outputs(result: dict, centered: pd.DataFrame, leg: str, period: pd.Ser
 
 def run() -> None:
     """Calibra en train, corre el filtro hacia adelante en toda la muestra con parámetros congelados y guarda todo."""
-    log_prices = np.log(pd.read_csv(PRICES_PATH, index_col="date", parse_dates=True).drop(columns="period"))
-    splits = json.loads(SPLITS_PATH.read_text())
-    selection = json.loads(SELECTION_PATH.read_text())
+    log_prices = np.log(pd.read_csv(PRICES_PATH, index_col="date", parse_dates=True, encoding="utf-8").drop(columns="period"))
+    splits = json.loads(SPLITS_PATH.read_text(encoding="utf-8"))
+    selection = json.loads(SELECTION_PATH.read_text(encoding="utf-8"))
     tickers, leg = selection["tickers"], selection["normalization_leg"]
     calibration = calibrate_group(slice_period(log_prices[tickers], splits, "train"), selection["beta"], leg)
     if calibration["q"] is None:
-        raise RuntimeError("Ningún q cumple (a)-(d) para el grupo final; ver filter1_q_grid.csv (no se relajan criterios)")
+        raise RuntimeError("Ningun q cumple (a)-(d) para el grupo final; ver filter1_q_grid.csv (no se relajan criterios)")
     others, R, Q, z0, burn_in = calibration["others"], calibration["R"], calibration["Q"], calibration["z0"], calibration["burn_in"]
 
     centered = log_prices[tickers] - calibration["train_mean"]
@@ -298,17 +298,17 @@ def run() -> None:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for name, frame in frames.items():
-        frame.to_csv(OUT_DIR / f"{name}.csv", date_format="%Y-%m-%d")
-    grid.to_csv(OUT_DIR / "filter1_q_grid.csv", index=False)
-    (OUT_DIR / "filter1_params.json").write_text(json.dumps(params, indent=2, ensure_ascii=False))
+        frame.to_csv(OUT_DIR / f"{name}.csv", date_format="%Y-%m-%d", encoding="utf-8")
+    grid.to_csv(OUT_DIR / "filter1_q_grid.csv", index=False, encoding="utf-8")
+    (OUT_DIR / "filter1_params.json").write_text(json.dumps(params, indent=2, ensure_ascii=False), encoding="utf-8")
     plot_beta(frames["beta_t"], selection["beta"], splits)
     plot_filter_diagnostic(frames["posvar_1"][others], frames["gain_1"][others], centered.index[burn_in],
                            stable_band(calibration["posvar_train"]), ticker_colors(tickers), splits)
     plot_q_grid(grid, calibration["q"], calibration["plateau_q_range"], PLATEAU_MIN_POINTS)
 
     m = params["chosen_q_metrics"]
-    print(f"  q = {params['q']:.2e} ({params['q_passing']} de {len(Q_GRID)} cumplen (a)-(d); racha más larga "
+    print(f"  q = {params['q']:.2e} ({params['q_passing']} de {len(Q_GRID)} cumplen (a)-(d); racha mas larga "
           f"{params['q_longest_valid_run']}; meseta: {params['plateau']}; orilla: {params['q_on_grid_edge']}); "
-          f"R = {R:.3e}; burn-in = {burn_in} días ({params['burn_in_share_of_train']:.0%} de train)")
+          f"R = {R:.3e}; burn-in = {burn_in} dias ({params['burn_in_share_of_train']:.0%} de train)")
     print(f"  spread (train, tras burn-in): ADF p = {m['spread_adf_pvalue']:.2e}, vida media = "
-          f"{m['spread_half_life_days']:.1f} días, cambios de signo = {sum(params['sign_changes_by_asset_train'].values())}")
+          f"{m['spread_half_life_days']:.1f} dias, cambios de signo = {sum(params['sign_changes_by_asset_train'].values())}")

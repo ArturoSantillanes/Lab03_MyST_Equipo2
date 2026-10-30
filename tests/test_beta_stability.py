@@ -21,7 +21,7 @@ def delivered_train_weights() -> pd.DataFrame:
     """Pesos entregados en train, después del burn-in."""
     if not WEIGHTS_PATH.exists():
         pytest.skip("correr python main.py primero")
-    weights = pd.read_csv(WEIGHTS_PATH, index_col="date", parse_dates=True)
+    weights = pd.read_csv(WEIGHTS_PATH, index_col="date", parse_dates=True, encoding="utf-8")
     return weights[(weights["period"] == "train") & ~weights["burn_in"]].drop(columns=["period", "burn_in"])
 
 

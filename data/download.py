@@ -38,7 +38,7 @@ def freeze(prices: pd.DataFrame, raw_path: Path, start: str, end: str) -> None:
     import yfinance as yf
 
     raw_path.parent.mkdir(parents=True, exist_ok=True)
-    prices.to_csv(raw_path, date_format="%Y-%m-%d")
+    prices.to_csv(raw_path, date_format="%Y-%m-%d", encoding="utf-8")
     raw_path.with_name(f"{raw_path.stem}_meta.json").write_text(json.dumps({
         "source": "Yahoo Finance (yfinance), cierre ajustado por dividendos y splits",
         "yfinance_version": yf.__version__,
@@ -46,7 +46,7 @@ def freeze(prices: pd.DataFrame, raw_path: Path, start: str, end: str) -> None:
         "start": start,
         "end": end,
         "tickers": list(prices.columns),
-    }, indent=2))
+    }, indent=2), encoding="utf-8")
 
 
 def load_or_download(tickers: list[str], raw_file: str, start: str, end: str) -> pd.DataFrame:
@@ -54,4 +54,4 @@ def load_or_download(tickers: list[str], raw_file: str, start: str, end: str) ->
     raw_path = ROOT / raw_file
     if not raw_path.exists():
         freeze(download_prices(tickers, start, end), raw_path, start, end)
-    return pd.read_csv(raw_path, index_col="date", parse_dates=True)
+    return pd.read_csv(raw_path, index_col="date", parse_dates=True, encoding="utf-8")

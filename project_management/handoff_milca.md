@@ -10,7 +10,9 @@ python -m pytest            # mis 4 archivos de prueba: 13 casos, todos pasan
 ```
 
 - Python 3.12 con `requirements.txt`. Las descargas están congeladas en `data/raw/<sector>.csv`, así que no hace falta internet.
-- Mis etapas tardan unos **6.5 minutos**. `cointegration` evalúa 910 grupos de 8 sectores, en paralelo con un proceso por núcleo, y el resultado no depende del número de núcleos. Dos corridas desde cero dieron artefactos idénticos byte por byte.
+- Mis etapas tardan unos **6.5 minutos** en una Mac M2 de 8 núcleos (`cointegration` midió 379 s y 431 s de cómputo activo el 2026-10-30). `cointegration` evalúa 910 grupos de 8 sectores, en paralelo con un proceso por núcleo, y el resultado no depende del número de núcleos. Dos corridas desde cero dieron artefactos idénticos byte por byte.
+- **Tiempo en otras máquinas:** Arturo midió unos **40 minutos** en la suya. El tiempo crece con menos núcleos y en Windows, donde cada proceso hijo vuelve a importar las librerías. Si la computadora se suspende a media corrida (laptop con batería o tapa cerrada), el tiempo de reloj se dispara aunque el cálculo no cambie. Dejen correr `python main.py` conectados a la corriente y sin suspender. Hay dos opciones para acelerarlo sin cambiar resultados (un hilo de álgebra lineal por proceso, o reusar la etapa si sus entradas no cambiaron); todavía no se aplica ninguna.
+- **Windows:** todas mis lecturas y escrituras de texto usan `encoding="utf-8"` y mis mensajes de consola son ASCII. Se probó forzando cp1252 en archivos y consola.
 
 **Pendiente para Arturo (estructura del repo; yo no toco esos archivos):**
 1. Crear `pytest.ini` en la raíz para que también funcione `pytest` a secas, con exactamente:
