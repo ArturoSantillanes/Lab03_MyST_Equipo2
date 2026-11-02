@@ -4,6 +4,7 @@
    reconstruyen de forma independiente a partir del libro de órdenes (fills), no se leen del motor.
 2. Costo total registrado = Σ por pata de (comisión 0.125% × valor operado en cada operación) + devengo del préstamo
    sobre las patas cortas (0.25% anual, ACT/360), recalculado desde las acciones reconstruidas.
+3. Temporalidad: una posición decidida al cierre de t no gana el cambio de precio del día t, sino el de t a t+1.
 Se prueba sobre datos sintéticos (con cambios de signo de β y ambas políticas de rebalanceo), sobre train real y sobre
 los artefactos de los tres tramos (artifacts/backtest/), sin volver a evaluar test ni valid.
 """
@@ -83,6 +84,21 @@ def test_portfolio_equals_cash_plus_legs_and_costs_match():
         # Las operaciones suman lo mismo que la curva: P&L neto de las operaciones = cambio del equity.
         assert result.trades["net_pnl"].sum() == pytest.approx(result.equity["equity"].iloc[-1] - INITIAL_CAPITAL,
                                                                abs=1e-6)
+
+    # Temporalidad: una posición abierta al cierre de t no gana el salto del precio del día t, sí el de t+1.
+    dates = pd.bdate_range("2021-01-04", periods=6)
+    jump = pd.DataFrame(50.0, index=dates, columns=TICKERS)
+    jump.loc[dates[2]:, "b"] = 60.0          # salta el día t = 2, en que se abre la posición
+    jump.loc[dates[4]:, "b"] = 70.0          # y salta otra vez el día 4, con la posición abierta desde el día 3
+    flat_beta = pd.DataFrame([[0.3, 1.0, -0.5, -0.6, -0.2, -0.3]] * 6, index=dates, columns=TICKERS)
+    opens = pd.DataFrame({"position": [0, 0, 1, 1, 1, 0], "holding_days": [0, 0, 0, 1, 2, 0],
+                          "exit_reason": ["", "", "", "", "", "senal"]}, index=dates)
+    timed = run_backtest(jump, flat_beta, opens)
+    assert timed.equity["gross_pnl"].iloc[2] == 0.0
+    fills_b = timed.fills[timed.fills["ticker"] == "b"]
+    held_b_day3 = fills_b.loc[fills_b["date"] <= dates[3], "shares"].sum()
+    assert held_b_day3 > 0
+    assert timed.equity["gross_pnl"].iloc[4] == pytest.approx(held_b_day3 * 10.0, abs=1e-6)
 
     inputs = load_inputs()
     train = run_backtest(inputs.prices, inputs.beta, generate_positions(period_z(inputs, "train"),
