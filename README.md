@@ -69,7 +69,44 @@ El dashboard solo lee los archivos de `artifacts/`; no vuelve a correr el backte
 
 ### Guía de uso del dashboard (una página)
 
-Pendiente: la completa Paula.
+Se abre con `streamlit run dashboard/app.py` (después de `python main.py`) en http://localhost:8501. Solo lee `artifacts/`: abrirlo no vuelve a correr el backtest.
+
+**Barra lateral (filtros que afectan a todas las gráficas)**
+- **Tramos:** marca o quita train, test y valid.
+- **Rango de fechas:** recorta todas las series de tiempo.
+- Debajo aparecen el grupo, los umbrales finales (calibrados solo en train) y la política de rebalanceo.
+
+**Pestaña 1 · Vista ejecutiva**
+1. *Curva de capital y drawdown:* equity neto de costos de cada tramo (cada uno empieza con $1,000,000) y su drawdown debajo. Las líneas punteadas son las fronteras entre tramos.
+2. *Tarjeta de métricas:* Sharpe, Sortino, Calmar, drawdown máximo, win rate y profit factor de cada tramo, más fechas, número de operaciones y rendimiento total.
+3. *Atribución de costos:* cascada del P&L bruto al neto (comisiones y préstamo) por tramo.
+4. *Bitácora de operaciones:* tabla filtrable por dirección (largo/corto) y resultado (ganadora/perdedora), además de los filtros de la barra lateral. Se ordena con clic en el encabezado y se descarga como CSV desde el menú de la tabla.
+5. *Distribución de retornos:* histograma de los retornos netos por operación (filtrados) con una normal superpuesta.
+
+**Pestaña 2 · Vista técnica**
+1. Spread S_t con la media μ̂ del filtro 2, entradas (triángulos) y salidas (marcadas por motivo).
+2. Z-score con las líneas ±z_entry, ±z_exit y ±z_stop.
+3. β̂_t de cada activo (filtro 1).
+4. Primer eigenvector de Johansen móvil.
+5. Ganancia de Kalman de ambos filtros: filtro 1 por activo, sin xel, que es la pata de normalización; filtro 2 para μ y σ².
+6. Varianza posterior de ambos filtros (escala log).
+7. Sharpe móvil de 252 días.
+
+En las gráficas de los filtros el eje se ajusta al tramo sin burn-in; el arranque se ve con el zoom o con doble clic.
+
+**Pestaña 3 · Calibración y supuestos**
+- Mapa de calor del Sharpe de train por z_entry × z_exit, con el número de operaciones en cada celda; z_stop y max_hold se eligen arriba. Sirve para ver la restricción de 30 operaciones y la meseta.
+- Comparación de rebalanceo diario contra banda y Sharpe de train por banda.
+- Deflated Sharpe Ratio y PSR fuera de muestra.
+- Supuestos (ejecución, capital disponible, base de días) y cuántas veces se evaluó valid.
+
+**Uso de las gráficas (Plotly)**
+- Arrastra para hacer zoom y haz doble clic para volver.
+- Pasa el cursor para ver los valores del día.
+- Haz clic en la leyenda para ocultar o mostrar una serie, o doble clic para aislarla.
+- El ícono de cámara descarga la gráfica como PNG.
+
+Si falta algún archivo de `artifacts/`, el dashboard lo dice y pide correr `python main.py`.
 
 ## Semilla
 
@@ -87,4 +124,4 @@ Resumen por persona; el detalle (qué generó la IA y cómo se verificó) está 
 
 - **Milca:** usó IA (Claude Code) en `data/` (incluye el preregistro de sectores `data/universe.json`), `cointegration/` (embudo de 7 etapas por sector, selección final con los requisitos R1-R7 y figuras 1, 3, 4, de diagnóstico y de la rejilla de q), `kalman/filter1_weights.py`, sus pruebas (`test_split`, `test_cointegration`, `test_beta_stability`, `test_filter1_step`), `project_management/handoff_milca.md` y `docs/secciones/milca.md`; revisó, probó y entendió su código.
 - **Arturo:** usó IA (Claude Code) en el armado del repositorio y `project_management/` (incluye `pytest.ini`, charter, sprints y `handoff_arturo.md`), `kalman/filter2_spread.py` (filtro 2), `strategy/` (`vecm.py`, `zscore.py`, `signals.py`, `figures.py` con las figuras 2, 5 y 6), sus pruebas (`test_causality`, `test_innovations`, `test_signals`, `test_filter2_step`) y `docs/secciones/arturo.md`; revisó, probó y entendió su código.
-- **Paula:** usó IA en `strategy/sizing.py`, `backtest/`, `performance/` y `dashboard/`; revisó, probó y entendió su código.
+- **Paula:** usó IA (Claude Code) en `strategy/sizing.py`, `backtest/` (`engine.py`, `costs.py`, `calibration.py`, `walk_forward.py`, `io.py` y la etapa `backtest`), `performance/` (`metrics.py`, `rolling.py`, `figures.py` con las figuras 7 y 8, y la etapa `performance`), `dashboard/app.py`, sus pruebas (`test_accounting`, `test_metrics`, `test_exposure_cap`), `project_management/handoff_paula.md` y `docs/secciones/paula.md`; revisó, probó y entendió su código.
