@@ -12,17 +12,16 @@ No vuelve a correr el backtest.
 import math
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from backtest.io import read_json, write_json
+from backtest.walk_forward import PERIODS
 from performance.figures import plot_equity_curves, plot_trade_returns
 from performance.metrics import ANNUALIZATION, RISK_FREE_RATE, deflated_sharpe, period_metrics
 from performance.rolling import WINDOW, rolling_table
 
 ROOT = Path(__file__).resolve().parent.parent
 BACKTEST_DIR = ROOT / "artifacts" / "backtest"
-PERIODS = ("train", "test", "valid")
 
 
 def deflated_sharpe_report(equity: pd.DataFrame, grid: pd.DataFrame, multiple_testing: dict) -> dict:

@@ -12,7 +12,6 @@ Orden: rejilla en train → regla de meseta → banda en train → parámetros c
 """
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from backtest.calibration import (BAND_GRID, GRID, N_MIN_DEFAULT, choose, choose_band, evaluate, grid_configurations,
