@@ -1,0 +1,275 @@
+{
+  "conventions": {
+    "risk_free_rate": 0.0,
+    "annualization_days": 252,
+    "returns": "simples diarios del equity; el primero contra el capital inicial",
+    "rolling_window_days": 252,
+    "periods": "cada tramo es una corrida independiente que empieza con el capital inicial; train empieza el primer día operable (2015-05-21)"
+  },
+  "params": {
+    "z_entry": 0.5,
+    "z_exit": 0.25,
+    "z_stop": 3.5,
+    "max_hold_days": 150,
+    "policy": "banda",
+    "band": 0.05
+  },
+  "by_period": {
+    "train": {
+      "start": "2015-05-21",
+      "end": "2019-12-30",
+      "n_days": 1161,
+      "final_equity": 973003.0584880221,
+      "total_return": -0.026996941511977957,
+      "cagr": -0.005922743675315867,
+      "volatility_annual": 0.018018261681797463,
+      "sharpe": -0.3206798095108002,
+      "sortino": -0.4502280147209353,
+      "calmar": -0.12341920313009114,
+      "max_drawdown": -0.04798883419359745,
+      "n_trades": 47,
+      "win_rate": 0.5106382978723404,
+      "profit_factor": 0.48675021252129785,
+      "avg_trade_return": -0.0005781667404385637,
+      "avg_holding_days": 18.085106382978722,
+      "share_days_invested": 0.7321274763135228,
+      "avg_exposure_all_days": 0.5763748276363987,
+      "avg_exposure_when_invested": 0.7872602057480692,
+      "max_exposure": 0.7999442875093917,
+      "pnl_attribution": {
+        "gross_pnl": 70558.61648368835,
+        "commission": 94256.88264021158,
+        "borrow_cost": 3298.6753554544052,
+        "net_pnl": -26996.94151197763
+      },
+      "exit_reasons": {
+        "senal": 46,
+        "fin_de_periodo": 1
+      }
+    },
+    "test": {
+      "start": "2019-12-31",
+      "end": "2022-12-27",
+      "n_days": 754,
+      "final_equity": 1042585.4146863067,
+      "total_return": 0.04258541468630672,
+      "cagr": 0.01403566233763942,
+      "volatility_annual": 0.03811465394440163,
+      "sharpe": 0.3846942005392802,
+      "sortino": 0.6055917493075456,
+      "calmar": 0.30330621041709505,
+      "max_drawdown": -0.04627555208427192,
+      "n_trades": 37,
+      "win_rate": 0.7027027027027027,
+      "profit_factor": 1.724731161514364,
+      "avg_trade_return": 0.0011506814602201285,
+      "avg_holding_days": 12.756756756756756,
+      "share_days_invested": 0.6259946949602122,
+      "avg_exposure_all_days": 0.4911954648925046,
+      "avg_exposure_when_invested": 0.7846639417986195,
+      "max_exposure": 0.7999598558401547,
+      "pnl_attribution": {
+        "gross_pnl": 122240.15298461914,
+        "commission": 77726.79578520775,
+        "borrow_cost": 1927.9425131052335,
+        "net_pnl": 42585.414686306154
+      },
+      "exit_reasons": {
+        "senal": 37
+      }
+    },
+    "valid": {
+      "start": "2022-12-28",
+      "end": "2025-12-31",
+      "n_days": 755,
+      "final_equity": 1001517.15923448,
+      "total_return": 0.0015171592344800366,
+      "cagr": 0.0005061338661274117,
+      "volatility_annual": 0.04004301606870725,
+      "sharpe": 0.032729244857044086,
+      "sortino": 0.04307919186342581,
+      "calmar": 0.006657069292378054,
+      "max_drawdown": -0.07602953250117206,
+      "n_trades": 34,
+      "win_rate": 0.6470588235294118,
+      "profit_factor": 1.0192040396143007,
+      "avg_trade_return": 8.449309888467153e-05,
+      "avg_holding_days": 16.11764705882353,
+      "share_days_invested": 0.7258278145695364,
+      "avg_exposure_all_days": 0.5693621656402797,
+      "avg_exposure_when_invested": 0.7844314508365168,
+      "max_exposure": 0.7999206636701252,
+      "pnl_attribution": {
+        "gross_pnl": 71560.6729850769,
+        "commission": 67874.9877280569,
+        "borrow_cost": 2168.526022540569,
+        "net_pnl": 1517.1592344794299
+      },
+      "exit_reasons": {
+        "senal": 32,
+        "stop": 1,
+        "fin_de_periodo": 1
+      }
+    }
+  },
+  "rebalance_comparison": [
+    {
+      "period": "train",
+      "policy": "diaria",
+      "band": 0.0,
+      "n_trades": 47,
+      "gross_pnl": 72116.57062339783,
+      "commission": 99068.4217574811,
+      "borrow_cost": 3334.9870418605406,
+      "net_pnl": -30286.838175945333,
+      "n_leg_trades": 5249,
+      "traded_value": 79254737.40598488,
+      "n_rebalance_days": 803,
+      "sharpe": -0.35530552935956794
+    },
+    {
+      "period": "test",
+      "policy": "diaria",
+      "band": 0.0,
+      "n_trades": 37,
+      "gross_pnl": 120565.79898452759,
+      "commission": 81164.62582524776,
+      "borrow_cost": 1951.1784781780507,
+      "net_pnl": 37449.994681097916,
+      "n_leg_trades": 2992,
+      "traded_value": 64931700.66019821,
+      "n_rebalance_days": 435,
+      "sharpe": 0.3378459150661675
+    },
+    {
+      "period": "valid",
+      "policy": "diaria",
+      "band": 0.0,
+      "n_trades": 34,
+      "gross_pnl": 75827.65113449097,
+      "commission": 71961.12882238865,
+      "borrow_cost": 2200.959232092831,
+      "net_pnl": 1665.563080009073,
+      "n_leg_trades": 3372,
+      "traded_value": 57568903.05791092,
+      "n_rebalance_days": 514,
+      "sharpe": 0.034058356650403694
+    },
+    {
+      "period": "train",
+      "policy": "banda",
+      "band": 0.05,
+      "n_trades": 47,
+      "gross_pnl": 70558.61648368835,
+      "commission": 94256.88264021158,
+      "borrow_cost": 3298.6753554544052,
+      "net_pnl": -26996.94151197793,
+      "n_leg_trades": 1649,
+      "traded_value": 75405506.11216927,
+      "n_rebalance_days": 184,
+      "sharpe": -0.3206798095108002
+    },
+    {
+      "period": "test",
+      "policy": "banda",
+      "band": 0.05,
+      "n_trades": 37,
+      "gross_pnl": 122240.15298461914,
+      "commission": 77726.79578520775,
+      "borrow_cost": 1927.9425131052335,
+      "net_pnl": 42585.41468630673,
+      "n_leg_trades": 1018,
+      "traded_value": 62181436.6281662,
+      "n_rebalance_days": 97,
+      "sharpe": 0.3846942005392802
+    },
+    {
+      "period": "valid",
+      "policy": "banda",
+      "band": 0.05,
+      "n_trades": 34,
+      "gross_pnl": 71560.6729850769,
+      "commission": 67874.9877280569,
+      "borrow_cost": 2168.526022540569,
+      "net_pnl": 1517.159234480001,
+      "n_leg_trades": 924,
+      "traded_value": 54299990.182445526,
+      "n_rebalance_days": 88,
+      "sharpe": 0.032729244857044086
+    }
+  ],
+  "deflated_sharpe": {
+    "method": "Deflated Sharpe Ratio (Bailey y López de Prado, 2014); Sharpe por día; varianza entre pruebas de las configuraciones viables de la rejilla de train",
+    "var_trials_daily_sharpe": 0.0016499473496824951,
+    "n_grid_configurations": 2535,
+    "n_grid_viable": 675,
+    "johansen_tests_train": 910,
+    "expected_false_positives_johansen_5pct": 45.5,
+    "train": {
+      "solo_rejilla": {
+        "n_trials": 2535.0,
+        "sr_daily": -0.02020092920107483,
+        "sr0_daily": 0.14261047757024328,
+        "sr0_annualized": 2.2638711480181115,
+        "skew": 0.02709763163723128,
+        "kurtosis": 5.2215000431633625,
+        "n_obs": 1161,
+        "dsr": 1.4913692896110607e-08
+      },
+      "solo_johansen": {
+        "n_trials": 910.0,
+        "sr_daily": -0.02020092920107483,
+        "sr0_daily": 0.13112820682368792,
+        "sr0_annualized": 2.0815957507279266,
+        "skew": 0.02709763163723128,
+        "kurtosis": 5.2215000431633625,
+        "n_obs": 1161,
+        "dsr": 1.2916016494100576e-07
+      },
+      "johansen_mas_rejilla": {
+        "n_trials": 3445.0,
+        "sr_daily": -0.02020092920107483,
+        "sr0_daily": 0.1458927268545481,
+        "sr0_annualized": 2.315975240101253,
+        "skew": 0.02709763163723128,
+        "kurtosis": 5.2215000431633625,
+        "n_obs": 1161,
+        "dsr": 7.82952637303022e-09
+      },
+      "johansen_por_rejilla": {
+        "n_trials": 2306850.0,
+        "sr_daily": -0.02020092920107483,
+        "sr0_daily": 0.20434136183856125,
+        "sr0_annualized": 3.2438185559345842,
+        "skew": 0.02709763163723128,
+        "kurtosis": 5.2215000431633625,
+        "n_obs": 1161,
+        "dsr": 1.053714898215246e-14
+      }
+    },
+    "out_of_sample_psr": {
+      "test": {
+        "n_trials": 1.0,
+        "sr_daily": 0.02423345679608917,
+        "sr0_daily": 0.0,
+        "sr0_annualized": 0.0,
+        "skew": 1.2072875534834762,
+        "kurtosis": 33.85604209898781,
+        "n_obs": 754,
+        "dsr": 0.7496097871479225
+      },
+      "valid": {
+        "n_trials": 1.0,
+        "sr_daily": 0.002061748630730438,
+        "sr0_daily": 0.0,
+        "sr0_annualized": 0.0,
+        "skew": -2.827634472444588,
+        "kurtosis": 43.17657762889404,
+        "n_obs": 755,
+        "dsr": 0.5225075862554608
+      }
+    },
+    "main": "train con johansen_por_rejilla (cota conservadora: cada configuración pudo combinarse con cada grupo)"
+  },
+  "validation_evaluations": 1
+}

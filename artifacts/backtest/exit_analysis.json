@@ -1,0 +1,65 @@
+{
+  "sigma_prev_median_train": 0.013953283441759156,
+  "by_period": {
+    "train": {
+      "exit_reasons_final_params": {
+        "senal": 46,
+        "stop": 0,
+        "tenencia_maxima": 0,
+        "fin_de_periodo": 1
+      },
+      "exit_reasons_default_params_signals_only": {
+        "senal": 4,
+        "tenencia_maxima": 2
+      },
+      "max_abs_z_inside_trades": 2.992836472074569,
+      "max_adverse_spread_move_inside_trades": 0.03201478863409424,
+      "days_abs_z_above_default_stop": 0,
+      "days_deviation_above_default_stop_times_train_sigma": 0,
+      "chosen_z_stop": 3.5
+    },
+    "test": {
+      "exit_reasons_final_params": {
+        "senal": 37,
+        "stop": 0,
+        "tenencia_maxima": 0,
+        "fin_de_periodo": 0
+      },
+      "exit_reasons_default_params_signals_only": {
+        "tenencia_maxima": 2,
+        "senal": 1
+      },
+      "max_abs_z_inside_trades": 2.8607632765480764,
+      "max_adverse_spread_move_inside_trades": 0.05154813330815622,
+      "days_abs_z_above_default_stop": 0,
+      "days_deviation_above_default_stop_times_train_sigma": 140,
+      "chosen_z_stop": 3.5
+    },
+    "valid": {
+      "exit_reasons_final_params": {
+        "senal": 32,
+        "stop": 1,
+        "tenencia_maxima": 0,
+        "fin_de_periodo": 1
+      },
+      "exit_reasons_default_params_signals_only": {
+        "tenencia_maxima": 2,
+        "senal": 1
+      },
+      "max_abs_z_inside_trades": 3.903772006351958,
+      "max_adverse_spread_move_inside_trades": 0.09803571065644068,
+      "days_abs_z_above_default_stop": 2,
+      "days_deviation_above_default_stop_times_train_sigma": 177,
+      "chosen_z_stop": 3.5
+    }
+  },
+  "episode_2024_feb_apr": {
+    "window": "2024-02-28 a 2024-04-16 (valid)",
+    "spread_min": -0.21957903111081223,
+    "spread_min_date": "2024-03-06",
+    "z_on_2024_02_29": -3.903772006351958,
+    "z_min_from_2024_03_01": -2.18402312688843,
+    "sigma_prev_2024_02_28": 0.02961068326645692,
+    "sigma_prev_max_in_window": 0.10251398806521621
+  }
+}
