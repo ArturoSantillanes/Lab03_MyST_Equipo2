@@ -21,10 +21,10 @@ import pandas as pd
 
 from backtest.engine import BacktestResult, run_backtest
 from backtest.io import read_json
+from data.split import PERIODS
 from strategy import generate_positions
 
 ROOT = Path(__file__).resolve().parent.parent
-PERIODS = ("train", "test", "valid")
 
 
 @dataclass

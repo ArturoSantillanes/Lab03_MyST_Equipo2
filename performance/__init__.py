@@ -15,7 +15,7 @@ from pathlib import Path
 import pandas as pd
 
 from backtest.io import read_json, write_json
-from backtest.walk_forward import PERIODS
+from data.split import PERIODS
 from performance.figures import plot_equity_curves, plot_trade_returns
 from performance.metrics import ANNUALIZATION, RISK_FREE_RATE, deflated_sharpe, period_metrics
 from performance.rolling import WINDOW, rolling_table
