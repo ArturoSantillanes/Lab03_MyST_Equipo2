@@ -10,7 +10,7 @@
 - Backtest con comisión 0.125% por pata (entrada y salida) y préstamo 0.25% anual; capital inicial $1,000,000.
 - Dashboard, pruebas (pytest) y reporte.
 
-**No hará:** Nivel B (varios grupos con Risk Parity), operación intradía, ejecución en vivo, ni elegir parámetros mirando prueba o validación.
+**No hará:** Risk Parity entre varios grupos (sección 3.7), operación intradía, ejecución en vivo, ni elegir parámetros mirando prueba o validación.
 
 ## 2. Plan de hitos
 

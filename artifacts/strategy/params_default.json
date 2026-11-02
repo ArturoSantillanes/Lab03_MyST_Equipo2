@@ -1,0 +1,10 @@
+{
+  "z_entry": 2.0,
+  "z_exit": 0.5,
+  "z_stop": 3.0,
+  "max_hold_days": 31,
+  "half_life_days": 15.303887387853427,
+  "max_hold_rule": "ceil(vida_media · log2(z_entry / z_exit))",
+  "period_used": "train (vida media de Johansen de train, selected_group.json)",
+  "note": "Valores de arranque, no óptimos. Los definitivos los elige Paula con grid search SOLO en train (con número mínimo de operaciones) usando strategy.generate_positions."
+}

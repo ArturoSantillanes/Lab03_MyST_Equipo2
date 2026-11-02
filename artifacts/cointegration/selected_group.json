@@ -1,0 +1,306 @@
+{
+  "tickers": [
+    "duk",
+    "xel",
+    "ed",
+    "es",
+    "cms",
+    "aee"
+  ],
+  "sector": "electricas",
+  "origin": "embudo del sector",
+  "period_used": "train",
+  "price_transform": "log",
+  "var_order": {
+    "aic": 1,
+    "bic": 1,
+    "used": 1,
+    "used_rule": "BIC (parsimonia; fijado antes de ver resultados)"
+  },
+  "deterministic": "constante sin restringir (det_order=0, caso 3): fuera de la relación de cointegración",
+  "critical_values_source": "MacKinnon, Haug y Michelis (1996), statsmodels.tsa.coint_tables",
+  "r_hat": 1,
+  "r_hat_maxeig": 1,
+  "eigenvalues": [
+    0.022539730497641637,
+    0.011650667164260043,
+    0.005029842475454154,
+    0.003907658724012879,
+    0.0012692945356466126,
+    0.00015275489115565655
+  ],
+  "trace_stats": [
+    101.55795624729518,
+    49.989710493987076,
+    23.481178716969357,
+    12.074965200757994,
+    3.2185259041577003,
+    0.34555795730009514
+  ],
+  "trace_crit_95": [
+    95.7542,
+    69.8189,
+    47.8545,
+    29.7961,
+    15.4943,
+    3.8415
+  ],
+  "trace_crit_99": [
+    104.9637,
+    77.8202,
+    54.6815,
+    35.4628,
+    19.9349,
+    6.6349
+  ],
+  "maxeig_stats": [
+    51.56824575330812,
+    26.508531777017716,
+    11.406213516211363,
+    8.856439296600293,
+    2.8729679468576053,
+    0.34555795730009514
+  ],
+  "maxeig_crit_95": [
+    40.0763,
+    33.8777,
+    27.5858,
+    21.1314,
+    14.2639,
+    3.8415
+  ],
+  "maxeig_crit_99": [
+    45.8662,
+    39.3693,
+    32.7172,
+    25.865,
+    18.52,
+    6.6349
+  ],
+  "beta_columns_raw": [
+    {
+      "duk": 10.44829717291655,
+      "xel": 56.294867476684416,
+      "ed": -27.241492029546585,
+      "es": -37.01989626977876,
+      "cms": 7.384623734099002,
+      "aee": -18.059932295977596
+    },
+    {
+      "duk": 8.985785364435685,
+      "xel": 16.300249020442106,
+      "ed": -0.4818305071654953,
+      "es": 19.576237407332947,
+      "cms": -21.40191960492624,
+      "aee": -13.15874487680945
+    },
+    {
+      "duk": -16.631309932735697,
+      "xel": 0.47046362450522866,
+      "ed": 1.8315865582376962,
+      "es": 8.162395115609367,
+      "cms": 15.670754112152299,
+      "aee": -15.192901507229214
+    },
+    {
+      "duk": 9.387959753113872,
+      "xel": -5.673707232404008,
+      "ed": 14.00702081929795,
+      "es": -3.7009672930352435,
+      "cms": 0.7826648234903024,
+      "aee": -8.709089407885045
+    },
+    {
+      "duk": -4.871682139436703,
+      "xel": 3.2921115419840183,
+      "ed": 10.321536449584388,
+      "es": -7.234835195757123,
+      "cms": -0.606483279422361,
+      "aee": 1.2182424915993622
+    },
+    {
+      "duk": 9.651879291204377,
+      "xel": -9.89050624234914,
+      "ed": 1.0713781259128436,
+      "es": -1.1899747051863125,
+      "cms": 8.048954328206879,
+      "aee": -3.498649081091654
+    }
+  ],
+  "beta_columns_normalized": [
+    {
+      "duk": 0.1855994629926771,
+      "xel": 1.0,
+      "ed": -0.48390720594251624,
+      "es": -0.657606952980416,
+      "cms": 0.13117756671436315,
+      "aee": -0.32080957120038445
+    },
+    {
+      "duk": -0.4198588505288731,
+      "xel": -0.761625560759987,
+      "ed": 0.02251342477964401,
+      "es": -0.9146953996980224,
+      "cms": 1.0,
+      "aee": 0.6148394685951724
+    },
+    {
+      "duk": 1.0,
+      "xel": -0.028287827381486465,
+      "ed": -0.11012882122006232,
+      "es": -0.4907848599191326,
+      "cms": -0.9422441272233933,
+      "aee": 0.913512018516639
+    },
+    {
+      "duk": 0.6702324408756329,
+      "xel": -0.40506166911575864,
+      "ed": 1.0,
+      "es": -0.26422230257102886,
+      "cms": 0.055876608851184006,
+      "aee": -0.6217660072216239
+    },
+    {
+      "duk": -0.4719919522866064,
+      "xel": 0.31895557004176256,
+      "ed": 1.0,
+      "es": -0.7009455647515002,
+      "cms": -0.058759011546849885,
+      "aee": 0.11802918078620132
+    },
+    {
+      "duk": -0.9758731307278276,
+      "xel": 1.0,
+      "ed": -0.10832389158458038,
+      "es": 0.12031484294414399,
+      "cms": -0.8138061016273253,
+      "aee": 0.3537381197042421
+    }
+  ],
+  "column_table": [
+    {
+      "column": 0,
+      "within_rank": true,
+      "adf_stat": -6.080243227146123,
+      "adf_pvalue": 1.0966182908665304e-07,
+      "half_life_days": 15.303887387853427,
+      "operable": true
+    },
+    {
+      "column": 1,
+      "within_rank": false,
+      "adf_stat": -2.6598408843132515,
+      "adf_pvalue": 0.08124905324026127,
+      "half_life_days": 55.649288550546935,
+      "operable": false
+    },
+    {
+      "column": 2,
+      "within_rank": false,
+      "adf_stat": -2.8791321139924837,
+      "adf_pvalue": 0.04782901949670177,
+      "half_life_days": 81.96131822416122,
+      "operable": false
+    },
+    {
+      "column": 3,
+      "within_rank": false,
+      "adf_stat": -2.2195352089596327,
+      "adf_pvalue": 0.19923185165664636,
+      "half_life_days": 147.1267055690116,
+      "operable": false
+    },
+    {
+      "column": 4,
+      "within_rank": false,
+      "adf_stat": -1.2595417565090654,
+      "adf_pvalue": 0.6474728910497309,
+      "half_life_days": 375.3449566260661,
+      "operable": false
+    },
+    {
+      "column": 5,
+      "within_rank": false,
+      "adf_stat": -2.9577606999274537,
+      "adf_pvalue": 0.03903176157686735,
+      "half_life_days": 162.16489923608228,
+      "operable": false
+    }
+  ],
+  "chosen_column": 0,
+  "beta": {
+    "duk": 0.1855994629926771,
+    "xel": 1.0,
+    "ed": -0.48390720594251624,
+    "es": -0.657606952980416,
+    "cms": 0.13117756671436315,
+    "aee": -0.32080957120038445
+  },
+  "abs_beta": {
+    "duk": 0.1855994629926771,
+    "xel": 1.0,
+    "ed": 0.48390720594251624,
+    "es": 0.657606952980416,
+    "cms": 0.13117756671436315,
+    "aee": 0.32080957120038445
+  },
+  "notional_share": {
+    "duk": 0.06678399922570873,
+    "xel": 0.35982862314824543,
+    "ed": 0.17412366364581006,
+    "es": 0.23662580446365605,
+    "cms": 0.0472014432187664,
+    "aee": 0.11543646629781334
+  },
+  "normalization_leg": "xel",
+  "sign_convention": "largo el spread = comprar cada activo con β_i > 0 y vender cada activo con β_i < 0, en proporción a |β_i|; corto el spread = todos los signos al revés",
+  "adf_stat": -6.080243227146146,
+  "adf_pvalue": 1.0966182908663971e-07,
+  "half_life_days": 15.303887387853427,
+  "corr_subwindows": [
+    0.742,
+    0.84,
+    0.838
+  ],
+  "stability_share": 0.7857142857142857,
+  "stable_windows": "11/14",
+  "requirements": {
+    "R1": true,
+    "R2": true,
+    "R3": true,
+    "R4": true,
+    "R5": true,
+    "R6": true,
+    "R7": true
+  },
+  "n_requirements": 7,
+  "eligible": true,
+  "shortfalls": {},
+  "relevance_share_threshold": 0.05,
+  "n_candidates": 910,
+  "n_eligible": 4,
+  "stage2_fallback_sectors": [
+    "aseguradoras",
+    "oro",
+    "petroleras_integradas",
+    "semiconductores"
+  ],
+  "fallback_count": 4,
+  "multiple_testing": {
+    "sectors": 8,
+    "assets": 73,
+    "groups_stage2_correlation": 938,
+    "trimmed_groups": 37,
+    "groups_v5": 975,
+    "groups_before_v5": 16187,
+    "groups_all_versions": 17162,
+    "engle_granger_pair_tests": 299,
+    "johansen_tests_train": 910,
+    "johansen_tests_subwindows": 12740,
+    "adf_tests_johansen_columns": 81195,
+    "q_configurations": 16527,
+    "adf_tests_kalman": 16527,
+    "expected_false_positives_johansen_5pct": 45.5,
+    "bonferroni_threshold_johansen": 5.4945054945054945e-05
+  }
+}
