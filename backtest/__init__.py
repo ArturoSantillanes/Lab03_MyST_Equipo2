@@ -30,9 +30,8 @@ STRATEGY_KEYS = ("z_entry", "z_exit", "z_stop", "max_hold_days")
 
 
 def write_csv(frame: pd.DataFrame, name: str, index_label: str | None = "date") -> None:
-    """CSV con fechas ISO; si index_label es None no se escribe el índice."""
-    frame.to_csv(OUT_DIR / name, date_format="%Y-%m-%d", index=index_label is not None, index_label=index_label,
-                 float_format="%.10g")
+    """CSV con fechas ISO y precisión completa (la prueba de contabilidad lo exige); sin índice si index_label es None."""
+    frame.to_csv(OUT_DIR / name, date_format="%Y-%m-%d", index=index_label is not None, index_label=index_label)
 
 
 def policy_summary(results: dict, policy: str, band: float) -> list[dict]:
