@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
-from matplotlib.ticker import FuncFormatter, PercentFormatter
+from matplotlib.ticker import FuncFormatter, MaxNLocator, PercentFormatter
 from scipy import stats
 
 from cointegration.figures import INK, MUTED, PERIODS, SERIES_COLORS, STYLE, boundary_handle, mark_periods, save
@@ -65,6 +65,7 @@ def plot_trade_returns(trades: pd.DataFrame, splits: dict):
             ax.set_title(f"{period}: {len(values)} operaciones", pad=8)
             ax.set_xlabel("retorno neto por operación (% del equity de entrada)")
             ax.set_ylabel("número de operaciones")
+            ax.yaxis.set_major_locator(MaxNLocator(integer=True))
             ax.legend(fontsize=7, loc="upper left")
         ax = fig.add_subplot(layout[1, :])
         for period in PERIODS:
