@@ -12,10 +12,10 @@ Archivos que se pasan los módulos. Si necesitas un cambio en un archivo de otra
 
 | De → a | Archivo | Contenido |
 |---|---|---|
-| Milca → todos | data/processed/prices.csv | Precios ajustados diarios del grupo elegido, una columna por ticker |
+| Milca → todos | data/processed/prices.csv | Precios ajustados diarios de los 73 activos candidatos de los 8 sectores, una columna por ticker. El grupo elegido está en `selected_group.json`, campo `tickers` |
 | Milca → todos | data/processed/splits.json | Fechas de inicio y fin de train, test y valid (60/20/20 cronológico) |
 | Milca → Arturo | artifacts/cointegration/selected_group.json | tickers, número de relaciones de cointegración, estadísticos de traza y de máximo eigenvalor, columnas del vector, vector elegido, pata de normalización y signo, p-value del ADF del spread, vida media en días |
-| Milca | artifacts/cointegration/group_selection.csv | Todos los grupos probados, sus estadísticos, la etapa de descarte, la razón y el total evaluado |
+| Milca | artifacts/cointegration/group_selection.csv | Los 938 subgrupos de la etapa 2, sus estadísticos, la etapa de descarte y la razón. El total evaluado está en `selected_group.json`, campo `multiple_testing` |
 | Milca | artifacts/cointegration/eigvec_rolling.csv | Primer eigenvector de Johansen móvil por fecha |
 | Milca → Arturo y Paula | artifacts/kalman/beta_t.csv, spread_t.csv, gain_1.csv, posvar_1.csv | β̂_t por activo ya normalizado, spread S_t = β̂_tᵀP_t, ganancia de Kalman y varianza posterior del filtro 1 |
 | Arturo → Paula | artifacts/kalman/gain_2.csv, posvar_2.csv, z_t.csv | Ganancia y varianza posterior del filtro 2; z-score con columnas z, mu_prev y sigma_prev |

@@ -5,16 +5,12 @@ Rama: `arturo/kalman2-strategy`, creada desde `milca/cointegracion-kalman1` porq
 ## Cómo se corre
 
 ```
-python main.py        # ... -> kalman.filter2_spread -> strategy; se detiene en backtest (NotImplementedError de Paula)
+python main.py        # pipeline completo: data -> ... -> kalman.filter2_spread -> strategy -> backtest -> performance
 python -m pytest      # o: pytest  (pytest.ini en la raíz)
 ```
 
-- Mis dos etapas tardan unos 20 segundos. La etapa `cointegration` de Milca tardó 40 minutos en mi máquina de 8 núcleos; ella reporta 6.5 minutos en la suya.
-- **En Windows, `python main.py` falla en la etapa `data` de Milca** con `UnicodeDecodeError`. Sus archivos leen JSON con `read_text()` sin `encoding="utf-8"`:
-  - `cointegration/universe.py:18`;
-  - `cointegration/__init__.py:64-65`;
-  - `kalman/filter1_weights.py:258-259`.
-- No toqué sus archivos. Yo corrí con `PYTHONUTF8=1`. En macOS y Linux no pasa. **Milca debe arreglarlo antes de la entrega**: el profe penaliza con −10 si el repositorio no corre con el comando documentado.
+- Mis dos etapas tardan unos 20 segundos. En mi máquina de 8 núcleos con Windows, la etapa `cointegration` de Milca midió 40 minutos el 29 de octubre y 37 a 39 minutos el 3 de noviembre; Milca reporta 6.5 minutos en su Mac. El pipeline completo midió 42 y 44 minutos el 3 de noviembre.
+- **Resuelto el 30 de octubre:** `python main.py` fallaba en Windows con `UnicodeDecodeError` por leer JSON sin `encoding="utf-8"`. Milca lo arregló (commit `2746c51`). El 3 de noviembre el pipeline corrió completo en un clon limpio con cp1252 y sin variables especiales, así que ya no hace falta `PYTHONUTF8=1`.
 
 ## Lo que Paula necesita
 
