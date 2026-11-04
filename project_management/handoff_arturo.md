@@ -99,7 +99,7 @@ Todas las salidas con fecha tienen la fecha ISO en la primera columna, columnas 
 
 1. q_μ está débilmente identificado: la verosimilitud es plana en [0, 10⁻²] y la desviación estándar de z cambia de 1.03 a 0.41 en esa región.
 2. El orden p = 6 viene de una regla Box-Jenkins escrita después de ver que el AR(1) dejaba acf1 = −0.066 en train.
-3. Fuera de muestra las innovaciones se deterioran (valid: varianza 1.39, Ljung-Box p = 0.027). Junto con las 3 sub-ventanas inestables de Milca al final de train, es un aviso de ruptura.
+3. Fuera de muestra las innovaciones se deterioran (valid: varianza 1.39, Ljung-Box p = 0.027). Junto con las 3 sub-ventanas inestables de Milca (la 10, la 13 y la 14, incluidas las 2 últimas de train), es un aviso de ruptura.
 4. Pocas operaciones con los valores por defecto (6 en train).
 5. La regla literal mantiene la posición si z cruza de un lado al otro sin pasar por |z| < z_exit, y reentra al día siguiente después de una salida por tenencia máxima.
 6. **El stop sobre |z| es débil ante un choque, porque σ̂ se adapta.** Ejemplo en valid:

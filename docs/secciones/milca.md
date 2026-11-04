@@ -265,9 +265,9 @@ Se generaron **37 recortes**. Junto con los 873 subgrupos, se evaluaron completo
 | 2017-01 a 2019-01 | 0 | 2.2e-5 | 7.0 | no |
 | 2017-07 a 2019-07 | 0 | 2.3e-5 | 6.9 | no |
 
-Las 3 sub-ventanas inestables están al final de train (r̂ = 0 por la traza, aunque el spread siga pasando ADF). Además, las vidas medias en ventanas de 2 años son más cortas (3 a 8 días) que en todo train (15.3): el vector de cada ventana se ajusta mejor dentro de su muestra.
+Las 3 sub-ventanas inestables son la 10, la 13 y la 14 de 14, incluidas las 2 últimas de train (r̂ = 0 por la traza, aunque el spread siga pasando ADF). Además, las vidas medias en ventanas de 2 años son más cortas (3 a 8 días) que en todo train (15.3): el vector de cada ventana se ajusta mejor dentro de su muestra.
 
-**Pérdida de cointegración fuera de muestra.** Si la cointegración se pierde fuera de la muestra, la estrategia pierde sentido. Aquí se **minimiza el error dentro de la muestra (train)**. Que las sub-ventanas inestables estén al final de train es una señal de alerta de ruptura posterior. Se documenta en vez de esconderse.
+**Pérdida de cointegración fuera de muestra.** Si la cointegración se pierde fuera de la muestra, la estrategia pierde sentido. Aquí se **minimiza el error dentro de la muestra (train)**. Que las 2 últimas sub-ventanas de train sean inestables es una señal de alerta de ruptura posterior. Se documenta en vez de esconderse.
 
 ## 5. Filtro de Kalman 1 (`kalman/filter1_weights.py`)
 
@@ -463,7 +463,7 @@ Las figuras 1, 3, 4 y la de convergencia tienen las fronteras train/test/valid d
 3. **Respaldo de la etapa 2 en 4 sectores** (contador = 4). No afecta al ganador, que pasa la correlación.
 4. **Burn-in del 37.1% de train** (840 días), por el q pequeño.
 5. **La traza no pasa al 99%** (101.56 contra 104.96).
-6. **Estabilidad del 79%:** las 3 sub-ventanas inestables son las últimas de train.
+6. **Estabilidad del 79%:** las 3 sub-ventanas inestables son la 10, la 13 y la 14 de 14, incluidas las 2 últimas de train.
 7. **CMS pesa 4.7% del nocional** y su peso de Kalman tiene signo contrario al de Johansen (estable después del burn-in).
 8. **Innovaciones del filtro 1 autocorrelacionadas** (0.967): es la reversión del spread, no un defecto del filtro.
 9. **Train es en muestra** para el filtro.

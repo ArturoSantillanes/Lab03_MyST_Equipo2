@@ -11,7 +11,7 @@ python -m pytest                  # o: pytest   (36 pruebas)
 ```
 
 - Mis dos etapas tardan unos **2.5 minutos**: `backtest` evalúa la rejilla de 2,535 configuraciones en train (≈ 150 s) y `performance` tarda unos segundos.
-- El pipeline completo lo domina `cointegration` (Milca). En una máquina de 4 núcleos con OpenBLAS conviene correr con `OPENBLAS_NUM_THREADS=1` (en PowerShell: `$env:OPENBLAS_NUM_THREADS="1"; python main.py`). Solo cambia el número de hilos de BLAS, no el código.
+- El pipeline completo lo domina `cointegration` (Milca). Es opcional: en una máquina de 4 núcleos con OpenBLAS se puede correr con `OPENBLAS_NUM_THREADS=1` (en PowerShell: `$env:OPENBLAS_NUM_THREADS="1"; python main.py`). Solo cambia el número de hilos de BLAS, no el código. No hizo falta en la verificación del 3 de noviembre.
 
 ## Qué hice
 
@@ -35,7 +35,7 @@ python -m pytest                  # o: pytest   (36 pruebas)
 3. **El tope de 80% se cumple después de pagar la comisión:** N = 0.8·(E − c·(G_actual + 0.8·E)), y las acciones se truncan hacia cero.
 4. **Préstamo en ACT/360:** días naturales desde el cierre anterior entre 360 (un fin de semana cobra 3 días), sobre el valor de mercado de las patas cortas del día anterior.
 5. **Cada tramo es una corrida independiente:** empieza plana con $1,000,000 y cierra al final del tramo (motivo `fin_de_periodo`). En train empieza el primer día operable, 2015-05-21.
-6. **Walk-forward = ancla fija:** calibrar en train, congelar y evaluar train → test → valid. Es un supuesto mío (el enunciado no lo describe) y está en la lista de preguntas al profesor.
+6. **Walk-forward = ancla fija:** calibrar en train, congelar y evaluar train → test → valid. Es un supuesto mío (el enunciado no lo describe) y está entre los puntos abiertos para el profesor (`docs/reporte.pdf`, sección 5.5).
 7. **Grid search** (`backtest/calibration.py`, procedimiento en el docstring):
    - Objetivo: Sharpe neto de train con rebalanceo diario.
    - Con menos de 30 operaciones el objetivo vale −1e9. **N_MIN = 30 no se bajó**: 675 de las 2,535 configuraciones lo cumplen.

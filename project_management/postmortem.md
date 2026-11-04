@@ -34,7 +34,7 @@ La causa principal del retraso fue la búsqueda del grupo: cada versión descart
 **Organizacionales**
 
 - **Revisión cruzada que no ocurrió.** El charter pide que cada PR lo revise otra persona, pero los PR #1 y #2 se fusionaron con 0 revisiones en GitHub, y el trabajo de Milca no tuvo un PR propio. La protección de `main` era solo un acuerdo.
-- **Permisos de GitHub.** Paula no pudo subir desde su sesión por falta de permiso de escritura, y su trabajo se subió desde su máquina. Eso llevó a reescribir el autor de sus commits y perder las fechas reales. **[Confirmar]** Paula debe describir cómo se resolvió.
+- **Permisos de GitHub.** Paula no pudo subir desde su sesión por falta de permiso de escritura, y se resolvió agregándola como colaboradora. Al reescribir el autor de sus commits se perdieron las fechas reales.
 - **Errores que se copian entre secciones.** Las tres secciones decían que las 3 sub-ventanas inestables son las últimas de train; en realidad son la 10, la 13 y la 14. El error nació en una sección y se copió a las demás sin volver al CSV. Es la misma falla del Lab 02, y se encontró hasta la auditoría final.
 - **Uso de IA sin cerrar.** El README dice que cada quien revisó y entendió su código, mientras `ia_log.md` todavía marca esa revisión como pendiente en 8 filas.
 - **Documentos que envejecen.** Los handoffs se escribieron una sola vez, y varios quedaron con fallas ya resueltas.

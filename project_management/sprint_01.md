@@ -29,6 +29,8 @@ Dejar el repositorio y los documentos de gestión listos, y construir en orden l
 - 29 de octubre: en Windows, `python main.py` falla en la etapa `data` (`UnicodeDecodeError`: JSON leídos sin `encoding="utf-8"` en archivos de Milca). Milca debe arreglarlo; mientras tanto se corre con `PYTHONUTF8=1`. **Resuelto el 30 de octubre** (commit `2746c51`): ya corre con cp1252 sin variables especiales.
 - 29 de octubre: la etapa `cointegration` tarda unos 40 minutos en una máquina de 8 núcleos con Windows, contra los 6.5 minutos reportados en Mac. El 3 de noviembre midió de 37 a 39 minutos, con 42 y 44 minutos para el pipeline completo.
 
-- 2 de noviembre: Paula terminó sizing, backtest, calibración, métricas, dashboard y sus 3 pruebas; el pipeline corre completo hasta `performance` y hay 36 pruebas. La estrategia pierde neto de costos en train y queda en cero en valid (ver handoff_paula.md). Desde esta sesión no hubo permiso de escritura en GitHub: la rama se sube desde la máquina de Paula.
+- 2 de noviembre: Paula terminó sizing, backtest, calibración, métricas, dashboard y sus 3 pruebas; el pipeline corre completo hasta `performance` y hay 36 pruebas. La estrategia pierde neto de costos en train y queda en cero en valid (ver handoff_paula.md).
+
+- Bloqueo de Paula: no pudo subir su rama desde su sesión por falta de permiso de escritura en el repositorio. Se resolvió agregándola como colaboradora.
 
 Lo que sigue está en [sprint_02.md](sprint_02.md).
