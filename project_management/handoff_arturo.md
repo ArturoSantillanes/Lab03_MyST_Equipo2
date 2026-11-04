@@ -5,16 +5,12 @@ Rama: `arturo/kalman2-strategy`, creada desde `milca/cointegracion-kalman1` porq
 ## Cómo se corre
 
 ```
-python main.py        # ... -> kalman.filter2_spread -> strategy; se detiene en backtest (NotImplementedError de Paula)
+python main.py        # pipeline completo: data -> ... -> kalman.filter2_spread -> strategy -> backtest -> performance
 python -m pytest      # o: pytest  (pytest.ini en la raíz)
 ```
 
-- Mis dos etapas tardan unos 20 segundos. La etapa `cointegration` de Milca tardó 40 minutos en mi máquina de 8 núcleos; ella reporta 6.5 minutos en la suya.
-- **En Windows, `python main.py` falla en la etapa `data` de Milca** con `UnicodeDecodeError`. Sus archivos leen JSON con `read_text()` sin `encoding="utf-8"`:
-  - `cointegration/universe.py:18`;
-  - `cointegration/__init__.py:64-65`;
-  - `kalman/filter1_weights.py:258-259`.
-- No toqué sus archivos. Yo corrí con `PYTHONUTF8=1`. En macOS y Linux no pasa. **Milca debe arreglarlo antes de la entrega**: el profe penaliza con −10 si el repositorio no corre con el comando documentado.
+- Mis dos etapas tardan unos 20 segundos. En mi máquina de 8 núcleos con Windows, la etapa `cointegration` de Milca midió 40 minutos el 29 de octubre y 37 a 39 minutos el 3 de noviembre; Milca reporta 6.5 minutos en su Mac. El pipeline completo midió 42 y 44 minutos el 3 de noviembre.
+- **Resuelto el 30 de octubre:** `python main.py` fallaba en Windows con `UnicodeDecodeError` por leer JSON sin `encoding="utf-8"`. Milca lo arregló (commit `2746c51`). El 3 de noviembre el pipeline corrió completo en un clon limpio con cp1252 y sin variables especiales, así que ya no hace falta `PYTHONUTF8=1`.
 
 ## Lo que Paula necesita
 
@@ -103,7 +99,7 @@ Todas las salidas con fecha tienen la fecha ISO en la primera columna, columnas 
 
 1. q_μ está débilmente identificado: la verosimilitud es plana en [0, 10⁻²] y la desviación estándar de z cambia de 1.03 a 0.41 en esa región.
 2. El orden p = 6 viene de una regla Box-Jenkins escrita después de ver que el AR(1) dejaba acf1 = −0.066 en train.
-3. Fuera de muestra las innovaciones se deterioran (valid: varianza 1.39, Ljung-Box p = 0.027). Junto con las 3 sub-ventanas inestables de Milca al final de train, es un aviso de ruptura.
+3. Fuera de muestra las innovaciones se deterioran (valid: varianza 1.39, Ljung-Box p = 0.027). Junto con las 3 sub-ventanas inestables de Milca (la 10, la 13 y la 14, incluidas las 2 últimas de train), es un aviso de ruptura.
 4. Pocas operaciones con los valores por defecto (6 en train).
 5. La regla literal mantiene la posición si z cruza de un lado al otro sin pasar por |z| < z_exit, y reentra al día siguiente después de una salida por tenencia máxima.
 6. **El stop sobre |z| es débil ante un choque, porque σ̂ se adapta.** Ejemplo en valid:

@@ -208,7 +208,7 @@ Parámetros congelados en train. Walk-forward = ancla fija: se calibra en train 
 
 ## 7. Limitaciones
 
-1. **Estabilidad del 79%:** 11 de 14 sub-ventanas, con las 3 inestables al final de train (Milca). Es un aviso de ruptura justo antes de test.
+1. **Estabilidad del 79%:** 11 de 14 sub-ventanas, y las 3 inestables son la 10, la 13 y la 14, incluidas las 2 últimas de train (Milca). Es un aviso de ruptura justo antes de test.
 2. **Deterioro en valid:** las innovaciones del filtro 2 tienen varianza 1.39 y Ljung-Box p = 0.027 (Arturo). Valid tiene el drawdown más profundo (−7.60%) y la peor operación (−$35,556).
 3. **Test y COVID:** σ̂ promedio se duplica (0.0143 en train → 0.0300 en test). Con los valores por defecto casi no hay señales (3 operaciones en test). Con mis umbrales bajos hay 37, pero las dos operaciones de más de 100 días de 2020-2022 concentran las pérdidas.
 4. **Número de operaciones:** 47, 37 y 34. Llegar a 30 en train obliga a z_entry = 0.5, una entrada a media desviación, donde la ganancia bruta por operación apenas cubre la comisión. Con 754 a 1,161 días por tramo, el error estándar del Sharpe anual es de 0.47 a 0.58: ningún Sharpe de la tabla de §5 se distingue de cero.

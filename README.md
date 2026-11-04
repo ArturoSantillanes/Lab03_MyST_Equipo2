@@ -35,6 +35,7 @@ Lab03_MyST_Equipo2/
 ├── project_management/
 │   ├── charter.md
 │   ├── sprint_01.md
+│   ├── sprint_02.md
 │   ├── postmortem.md
 │   ├── contrato.md           # archivos que se pasan entre módulos
 │   └── ia_log.md             # registro de uso de IA
@@ -45,6 +46,8 @@ Lab03_MyST_Equipo2/
 ```
 
 ## Instalación
+
+Verificado en un clon limpio con Python 3.14.7.
 
 1. Clonar el repositorio: `git clone https://github.com/ArturoSantillanes/Lab03_MyST_Equipo2.git` y entrar a la carpeta.
 2. Crear un entorno virtual: `python -m venv .venv`
@@ -58,6 +61,8 @@ python main.py
 ```
 
 Ejecuta en orden: data → cointegration → kalman.filter1_weights → kalman.filter2_spread → strategy → backtest → performance. Imprime cada etapa con su duración y se detiene en el primer error indicando qué etapa falló.
+
+Tiempo medido en Windows 11 con 8 núcleos: de 42 a 44 minutos en total, de los cuales la etapa `cointegration` toma de 37 a 39. En una Mac M2, esa etapa tarda unos 6.5 minutos.
 
 ## Dashboard
 
@@ -123,5 +128,5 @@ pytest
 Resumen por persona; el detalle (qué generó la IA y cómo se verificó) está en [project_management/ia_log.md](project_management/ia_log.md).
 
 - **Milca:** usó IA (Claude Code) en `data/` (incluye el preregistro de sectores `data/universe.json`), `cointegration/` (embudo de 7 etapas por sector, selección final con los requisitos R1-R7 y figuras 1, 3, 4, de diagnóstico y de la rejilla de q), `kalman/filter1_weights.py`, sus pruebas (`test_split`, `test_cointegration`, `test_beta_stability`, `test_filter1_step`), `project_management/handoff_milca.md` y `docs/secciones/milca.md`; revisó, probó y entendió su código.
-- **Arturo:** usó IA (Claude Code) en el armado del repositorio y `project_management/` (incluye `pytest.ini`, charter, sprints y `handoff_arturo.md`), `kalman/filter2_spread.py` (filtro 2), `strategy/` (`vecm.py`, `zscore.py`, `signals.py`, `figures.py` con las figuras 2, 5 y 6), sus pruebas (`test_causality`, `test_innovations`, `test_signals`, `test_filter2_step`) y `docs/secciones/arturo.md`; revisó, probó y entendió su código.
+- **Arturo:** usó IA (Claude Code) en el armado del repositorio y `project_management/` (incluye `pytest.ini`, charter, sprints y `handoff_arturo.md`), `kalman/filter2_spread.py` (filtro 2), `strategy/` (`vecm.py`, `zscore.py`, `signals.py`, `figures.py` con las figuras 2, 5 y 6), sus pruebas (`test_causality`, `test_innovations`, `test_signals`, `test_filter2_step`), `docs/secciones/arturo.md`, la auditoría final, el armado de `docs/reporte.pdf`, el borrador de `postmortem.md` y `sprint_02.md`; revisó, probó y entendió su código.
 - **Paula:** usó IA (Claude Code) en `strategy/sizing.py`, `backtest/` (`engine.py`, `costs.py`, `calibration.py`, `walk_forward.py`, `io.py` y la etapa `backtest`), `performance/` (`metrics.py`, `rolling.py`, `figures.py` con las figuras 7 y 8, y la etapa `performance`), `dashboard/app.py`, sus pruebas (`test_accounting`, `test_metrics`, `test_exposure_cap`), `project_management/handoff_paula.md` y `docs/secciones/paula.md`; revisó, probó y entendió su código.

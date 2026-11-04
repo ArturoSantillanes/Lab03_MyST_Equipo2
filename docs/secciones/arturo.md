@@ -176,7 +176,7 @@ El criterio está escrito en `tests/test_innovations.py`:
 | valid | 755 | 1.394 | 0.063 | 0.027 | no |
 
 - En test y valid las innovaciones se deterioran: la varianza sube a 1.39 en valid y Ljung-Box rechaza al 5%.
-- No se recalibra con esos tramos, porque estaría prohibido. Se reporta como evidencia de cambio de régimen, coherente con el aviso de Milca de que las últimas 3 sub-ventanas de train ya no eran estables.
+- No se recalibra con esos tramos, porque estaría prohibido. Se reporta como evidencia de cambio de régimen, coherente con el aviso de Milca: 3 de las 14 sub-ventanas de train no son estables (la 10, la 13 y la 14), incluidas las 2 últimas.
 - **Filtro 1 (diagnóstico, no prueba estricta):** sus innovaciones normalizadas tienen acf1 = **0.967** y varianza 0.795 (train, sin burn-in, 1,423 días). No es un error. La innovación del filtro 1 **es** el spread (S_t = ỹ_t), y el spread revierte con vida media de 15 a 20 días. Si fueran blancas, el filtro 1 habría perseguido cada desviación y no quedaría reversión que operar. La prueba de ruido blanco aplica al filtro 2. **Punto a confirmar con el profesor.**
 
 ### 1.7 Formulación de Powell del filtro 2
@@ -337,21 +337,21 @@ Son valores de arranque convencionales, no óptimos: **z_entry = 2.0, z_exit = 0
 Todas tienen título, ejes etiquetados, leyenda, fronteras train/test/valid dibujadas y etiquetadas, y el burn-in sombreado.
 - **Figura 2** (`fig2_spread_senales.png`): spread S_t con la media previa μ̂_{t|t−1} y la banda μ̂ ± z_entry·σ̂, entradas largas (▲), entradas cortas (▼) y salidas por señal, stop o tenencia máxima, con los parámetros por defecto.
 - **Figura 5** (`fig5_ganancia_kalman.png`): |K_t| de los 5 pesos del filtro 1 y de μ y σ² del filtro 2, en escala **lineal**. El máximo del burn-in se anota aparte para no aplastar el resto.
-- **Figura 6** (`fig6_zscore.png`): z_t con ±z_entry, ±z_exit y ±z_stop.
+- **Figura 6** (`fig6_zscore.png`): z_t con ±z_entry, ±z_exit y ±z_stop, con los parámetros por defecto.
 
 ## 7. Limitaciones
 
 1. **Las innovaciones del filtro 1 están autocorrelacionadas (0.967, train):** es la reversión del spread, no un defecto. La prueba de blancura aplica al filtro 2. Hay que confirmarlo con el profesor.
-2. **Posible ruptura de la cointegración (heredado de Milca):** las 3 sub-ventanas inestables son las últimas de train. Hay señales fuera de muestra:
+2. **Posible ruptura de la cointegración (heredado de Milca):** 3 de las 14 sub-ventanas de train son inestables (la 10, la 13 y la 14), incluidas las 2 últimas. Hay señales fuera de muestra:
    - las innovaciones del filtro 2 empeoran en valid (varianza 1.39, Ljung-Box p = 0.027);
-   - en marzo de 2024 (valid) el z llega a −3.9;
+   - el 2024-02-29 (valid) el z llega a −3.9;
    - en 2020 (test) la σ̂ promedio se duplica (de 0.014 en train a 0.030 en test). La banda se abre y casi no hay señales durante el choque del COVID.
 3. **q_μ está débilmente identificado:** la verosimilitud es plana en [0, 10⁻²], y la desviación estándar de z va de 1.02 a 0.40 dentro de esa región. Se respetó la regla de máxima verosimilitud.
 4. **El orden del AR (p = 6) salió de una regla Box-Jenkins** que se escribió después de ver que el AR(1) del BIC dejaba autocorrelación de orden 1 (−0.066) en train. Se declara arriba.
 5. **El burn-in total es largo:** se puede operar en train solo desde el 2015-05-21 (1,161 de 2,263 días). Con los valores por defecto hay apenas 6 operaciones en train: 5 cortas y 1 larga.
 6. **Los parámetros por defecto no están optimizados.** El z con estadísticos previos tiene desviación estándar 0.93 en train, así que z_entry = 2 equivale a unas 2.15 desviaciones observadas.
 7. **Pruebas múltiples:** el grupo salió de 910 pruebas de Johansen (Milca). El desempeño final debe corregirse con el Deflated Sharpe Ratio o el Reality Check, en el backtest.
-8. **El stop sobre |z| es débil ante un choque, porque σ̂ se adapta (valid).** El 2024-02-29 el spread cae de −0.020 a −0.112, con z = −3.90: no se entra porque está más allá del stop. Al día siguiente el spread está en −0.175, pero σ̂ ya creció y z = −2.18, así que se abre largo. El spread llega a −0.220 y z nunca baja de −2.18. El stop no se dispara y la posición cierra por tenencia máxima el 2024-04-16. La defensa efectiva contra "una posición que deja de revertir" es la tenencia máxima.
+8. **El stop sobre |z| es débil ante un choque, porque σ̂ se adapta (valid, con los parámetros por defecto 2.0/0.5/3.0/31).** El 2024-02-29 el spread cae de −0.020 a −0.112, con z = −3.90: no se entra porque está más allá del stop. Al día siguiente el spread está en −0.175, pero σ̂ ya creció y z = −2.18, así que se abre largo. El spread llega a −0.220 y z nunca baja de −2.18. El stop no se dispara y la posición cierra por tenencia máxima el 2024-04-16. Con estos parámetros, la defensa efectiva contra "una posición que deja de revertir" es la tenencia máxima. Con los parámetros finales (0.5/0.25/3.5/150) no hubo ninguna salida por tenencia en los tres tramos (`paula.md`, §6).
 9. **Reproducibilidad entre máquinas:** recalcular el filtro 1 en otra computadora cambia el spread en menos de 1.5·10⁻⁹ por redondeo de punto flotante. Dentro de una misma máquina el resultado es idéntico bit a bit.
 
 ## 8. Preguntas para el profesor
