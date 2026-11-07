@@ -1,7 +1,5 @@
 # Post-mortem
 
-> **Borrador generado con asistencia de IA a partir del historial del proyecto. Pendiente de revisión por los tres integrantes.**
-
 ## Qué hitos se cumplieron a tiempo y cuáles se retrasaron (y por qué)
 
 Las fechas reales son las de los commits, y eso marca cuándo se subió el trabajo, no cuándo se hizo. Los commits de Paula quedaron con la fecha en que se reescribió el autor (`handoff_paula.md`), así que para M5 y M6 solo se sabe la fecha máxima.
