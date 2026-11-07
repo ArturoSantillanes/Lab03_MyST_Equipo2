@@ -10,5 +10,8 @@ venv/
 # Sistema
 .DS_Store
 
+# Respaldo local antes de volver a correr el pipeline
+_respaldo_previo/
+
 # NO ignorar artifacts/ ni data/: el dashboard lee artifacts/ y los datos
 # congelados se versionan para que el repositorio sea reproducible.
