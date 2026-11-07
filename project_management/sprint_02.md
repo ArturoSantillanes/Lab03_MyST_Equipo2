@@ -14,6 +14,7 @@ Integrar las tres ramas en `main`, comprobar que el repositorio corre desde un c
 | Arturo | Armar `docs/reporte.pdf` desde las tres secciones, con figuras, anexo de grupos y ejemplo del sistema completo | Hecho, en `integracion-final`; falta la revisión de los tres |
 | Arturo | Borrador del post-mortem | Hecho, en `integracion-final`; falta la revisión de los tres |
 | Arturo | Corregir `handoff_milca.md`, `docs/secciones/milca.md`, `handoff_paula.md`, `docs/secciones/paula.md` y la nota de Paula en `sprint_01.md`, con autorización de ambas | Hecho, en `integracion-final` |
+| Arturo | Quitar "Supuestos" del dashboard y actualizar README y reporte | Hecho el 6 de noviembre, en `arturo/dashboard-sin-supuestos`; falta la revisión de Paula |
 | Paula y Milca | Revisar la integración final y dejar la revisión de los PR #1 y #2 | Pendiente |
 | Los tres | Revisar y editar el post-mortem y el reporte | Pendiente |
 | Los tres | Cerrar su revisión personal en `ia_log.md` (8 filas pendientes) | Pendiente |

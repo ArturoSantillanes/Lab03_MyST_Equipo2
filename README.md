@@ -99,11 +99,10 @@ Se abre con `streamlit run dashboard/app.py` (después de `python main.py`) en h
 
 En las gráficas de los filtros el eje se ajusta al tramo sin burn-in; el arranque se ve con el zoom o con doble clic.
 
-**Pestaña 3 · Calibración y supuestos**
+**Pestaña 3 · Calibración**
 - Mapa de calor del Sharpe de train por z_entry × z_exit, con el número de operaciones en cada celda; z_stop y max_hold se eligen arriba. Sirve para ver la restricción de 30 operaciones y la meseta.
 - Comparación de rebalanceo diario contra banda y Sharpe de train por banda.
-- Deflated Sharpe Ratio y PSR fuera de muestra.
-- Supuestos (ejecución, capital disponible, base de días) y cuántas veces se evaluó valid.
+- Deflated Sharpe Ratio, PSR fuera de muestra y cuántas veces se evaluó valid.
 
 **Uso de las gráficas (Plotly)**
 - Arrastra para hacer zoom y haz doble clic para volver.
