@@ -7,7 +7,7 @@ Reglas: Un solo comando: streamlit run dashboard/app.py. Todas las gráficas int
 
 Pestañas: vista ejecutiva (capital y drawdown, tarjeta de métricas, atribución de costos, bitácora y retornos por
 operación), vista técnica (spread con señales, β̂_t, eigenvector móvil, ganancias y varianzas posteriores de ambos
-filtros, z-score con umbrales y Sharpe móvil) y calibración (rejilla de train, banda y supuestos). La barra lateral
+filtros, z-score con umbrales y Sharpe móvil) y calibración (rejilla de train, banda y DSR). La barra lateral
 filtra por tramo y por rango de fechas; todas las gráficas son Plotly (zoom, hover y leyenda que oculta series).
 """
 import json
@@ -291,7 +291,7 @@ def technical_view(positions, params, splits, start, end, window):
 
 
 def calibration_view(grid, params, metrics, band_grid, comparison):
-    """Rejilla de train (meseta o pico), banda de rebalanceo, DSR y supuestos."""
+    """Rejilla de train (meseta o pico), banda de rebalanceo y DSR."""
     sel = params["selection"]
     st.subheader("Grid search (solo train)")
     st.markdown(f"**{params['grid']['n_configurations']:,} configuraciones**, {params['grid']['n_viable']} con al menos "
@@ -336,8 +336,6 @@ def calibration_view(grid, params, metrics, band_grid, comparison):
     st.markdown(f"Fuera de muestra (una sola prueba por tramo, PSR contra Sharpe 0): test {psr['test']:.2f}, "
                 f"valid {psr['valid']:.2f}. Pruebas de Johansen en train: {dsr['johansen_tests_train']} "
                 f"({dsr['expected_false_positives_johansen_5pct']} falsos positivos esperados al 5%).")
-    st.subheader("Supuestos")
-    st.json(params["assumptions"])
     st.markdown(f"Valid evaluada **{params['validation_evaluations']}** vez con parámetros congelados.")
 
 
@@ -373,7 +371,7 @@ def main() -> None:
         out = frame.loc[start:end]
         return out[out["period"].isin(periods)] if "period" in out.columns else out
 
-    executive, technical, calibration = st.tabs(["Vista ejecutiva", "Vista técnica", "Calibración y supuestos"])
+    executive, technical, calibration = st.tabs(["Vista ejecutiva", "Vista técnica", "Calibración"])
     with executive:
         executive_view(window(equity), trades, metrics, splits, periods, start, end)
     with technical:
