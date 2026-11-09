@@ -243,11 +243,10 @@ def technical_view(positions, params, splits, start, end, window):
     show(style(fig, f"z_t (filtro 2, estadísticos previos); umbrales finales de train · max_hold = "
                     f"{params['max_hold_days']} días", "z"))
 
-    st.subheader("Pesos dinámicos β̂_t por activo")
+    st.subheader("Pesos dinámicos por activo")
     beta = window(dated("kalman/beta_t.csv"))
     tickers = [c for c in beta.columns if c not in ("period", "burn_in")]
-    show(line_panel(beta, tickers, "β̂_t del filtro 1 (normalizado con xel = +1; eje ajustado fuera del burn-in)",
-                    "β̂_t", splits, start, end, settled=~beta["burn_in"].astype(bool)))
+    show(line_panel(beta, tickers, "", "Peso", splits, start, end, settled=~beta["burn_in"].astype(bool)))
 
     st.subheader("Primer eigenvector de Johansen móvil")
     eig = window(dated("cointegration/eigvec_rolling.csv"))
