@@ -14,7 +14,7 @@ Las fechas reales son las de los commits, y eso marca cuándo se subió el traba
 | M5 y M6 Backtest y dashboard | 31 oct | A más tardar el 1 nov | Posible retraso de hasta 1 día |
 | M7 Integración, reporte, README | 1 nov | Integración y README el 1 nov; reporte el 3 nov | Parcial: el reporte se retrasó 2 días |
 | M8 Último commit | 2 nov | No se cumplió | La fecha real de entrega resultó ser el 9 nov |
-| M9 Colchón y ensayos | 3 nov | El 3 nov se usó para auditar y cerrar pendientes | No hubo colchón. El repositorio no registra ensayos |
+| M9 Colchón y ensayos | 3 nov | El 3 nov se usó para auditar y cerrar tareas abiertas | No hubo colchón. El repositorio no registra ensayos |
 
 La causa principal del retraso fue la búsqueda del grupo: cada versión descartada obligaba a repetir el embudo. Como el orden de trabajo era en cadena (Milca, Arturo, Paula), ese retraso se comprimió sobre los bloques siguientes y dejó el reporte y este documento para el final.
 
@@ -34,7 +34,7 @@ La causa principal del retraso fue la búsqueda del grupo: cada versión descart
 - **Revisión cruzada que no ocurrió.** El charter pide que cada PR lo revise otra persona, pero los PR #1 y #2 se fusionaron con 0 revisiones en GitHub, el trabajo de Milca no tuvo un PR propio, y la integración final del 3 de noviembre tampoco tiene revisión registrada. La protección de `main` era solo un acuerdo.
 - **Permisos de GitHub.** Paula no pudo subir desde su sesión por falta de permiso de escritura, y se resolvió agregándola como colaboradora. Al reescribir el autor de sus commits se perdieron las fechas reales.
 - **Errores que se copian entre secciones.** Las tres secciones decían que las 3 sub-ventanas inestables son las últimas de train; en realidad son la 10, la 13 y la 14. El error nació en una sección y se copió a las demás sin volver al CSV. Es la misma falla del Lab 02, y se encontró hasta la auditoría final.
-- **Uso de IA sin cerrar.** El README dice que cada quien revisó y entendió su código, mientras `ia_log.md` todavía marca esa revisión como pendiente en 5 filas personales (1 de Arturo y 4 de Paula), además de la revisión conjunta de los tres y la de Paula sobre el cambio al dashboard. Milca cerró las suyas el 4 de noviembre.
+- **Uso de IA cerrado tarde.** El README decía desde el 1 de noviembre que cada quien revisó y entendió su código, pero `ia_log.md` marcó esa revisión como abierta hasta el final: Milca cerró las suyas el 4 de noviembre; las 5 filas personales de Arturo y Paula, la revisión conjunta de los tres y la de Paula sobre el cambio al dashboard se cerraron el 8 de noviembre, un día antes de la entrega.
 - **Documentos que envejecen.** Los handoffs se escribieron una sola vez, y varios quedaron con fallas ya resueltas.
 
 ## Qué haríamos distinto en un entorno de producción real
@@ -55,5 +55,5 @@ La causa principal del retraso fue la búsqueda del grupo: cada versión descart
 | 2 | Pérdida de cointegración fuera de muestra (alta / alto) | Parcialmente | El bruto sigue positivo en test y valid, pero las innovaciones se deterioran en valid (varianza 1.394, Ljung-Box p = 0.027). Con los parámetros finales, el stop actuó 1 vez y la tenencia máxima 0. **El ADF del spread en test y valid que prometía el charter no se midió** |
 | 3 | Filtro diverge o queda mal calibrado (media / alto) | Parcialmente | El filtro 1 se comía la reversión con máxima verosimilitud y se corrigió antes de usarlo. El filtro 2 pasa la prueba en train, pero no en valid; no se recalibró porque estaría prohibido |
 | 4 | Falta de tiempo para dashboard y reporte (media / alto) | Sí, en el reporte | El dashboard se terminó, pero el reporte y este documento quedaron para el final y el colchón del 3 de noviembre se consumió |
-| 5 | Commits o dominio desbalanceados (media / alto) | Parcialmente | Todos tienen commits (en `main` al 6 de noviembre, contando fusiones: Milca 28, Arturo 18, Paula 16), pero la revisión cruzada no ocurrió y las revisiones personales de Arturo y Paula siguen abiertas. Falta comprobar que los tres pueden explicar todo |
+| 5 | Commits o dominio desbalanceados (media / alto) | Parcialmente | Todos tienen commits (en `main` al 6 de noviembre, contando fusiones: Milca 28, Arturo 18, Paula 16), pero la revisión cruzada de los PR no ocurrió en GitHub. La mitigación llegó al final: el 8 de noviembre los tres estudiaron el código y el reporte completos y cerraron las revisiones personales |
 | 6 | Enfermedad o ausencia (baja / medio) | Sin registro | El repositorio no documenta ninguna ausencia |
