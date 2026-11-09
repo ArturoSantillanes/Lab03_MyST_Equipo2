@@ -11,16 +11,16 @@ Integrar las tres ramas en `main`, comprobar que el repositorio corre desde un c
 | Arturo y Paula | Integración de las ramas en `main` (PR #1 y #2) | Hecho el 1 de noviembre a las 22:03, sin revisión registrada en GitHub |
 | Arturo | Auditoría en un clon limpio: `python main.py` dos veces, 36 pruebas, dashboard, estructura y commits | Hecho el 3 de noviembre |
 | Arturo | Corregir `handoff_arturo.md`, `sprint_01.md`, `contrato.md`, `README.md` y `docs/secciones/arturo.md` | Hecho, en `main` (PR #3) |
-| Arturo | Armar `docs/reporte.pdf` desde las tres secciones, con figuras, anexo de grupos y ejemplo del sistema completo | Hecho, en `main` (PR #3); revisado por los tres el 8 de noviembre |
-| Arturo | Primera versión del post-mortem | Hecho, en `main` (PR #3); revisado por los tres el 8 de noviembre |
+| Arturo | Armar `docs/reporte.pdf` desde las tres secciones, con figuras, anexo de grupos y ejemplo del sistema completo | Hecho, en `main` (PR #3); cada integrante revisó su parte el 8 de noviembre |
+| Arturo | Primera versión del post-mortem | Hecho, en `main` (PR #3); cada integrante revisó su parte el 8 de noviembre |
 | Arturo | Corregir `handoff_milca.md`, `docs/secciones/milca.md`, `handoff_paula.md`, `docs/secciones/paula.md` y la nota de Paula en `sprint_01.md`, con autorización de ambas | Hecho, en `main` (PR #3) |
 | Arturo | Quitar "Supuestos" del dashboard y actualizar README y reporte | Hecho el 6 de noviembre, en el PR #5; revisado por Paula el 8 de noviembre |
 | Milca | Cerrar su revisión personal en `ia_log.md` y quitar 9 `.gitkeep` | Hecho el 6 de noviembre, en `main` (PR #4) |
-| Paula y Milca | Revisar la integración final y dejar la revisión de los PR #1 y #2 | No quedó registrada en GitHub; la sustituyó el estudio completo del código por los tres el 8 de noviembre |
-| Los tres | Revisar y editar el post-mortem y el reporte | Hecho el 8 de noviembre |
+| Paula y Milca | Revisar la integración final y dejar la revisión de los PR #1 y #2 | No quedó registrada en GitHub; cada integrante revisó su propia parte el 8 de noviembre |
+| Los tres | Revisar y editar el post-mortem y el reporte | Cada integrante revisó su parte el 8 de noviembre |
 | Arturo y Paula | Cerrar su revisión personal en `ia_log.md` (5 filas: 1 de Arturo y 4 de Paula) | Hecho el 8 de noviembre |
 | Los tres | Confirmar las preguntas abiertas con el profesor (reporte, sección 5.5) | No se hizo: las 7 preguntas quedan declaradas como supuestos en la sección 5.5. El profesor sí confirmó el alcance (sin Risk Parity, un solo nivel, grupo de 2·n = 6 activos) |
-| Los tres | Abrir el dashboard en un navegador real y ensayar la exposición | Dashboard abierto en navegador el 8 de noviembre; ensayo antes de la exposición del 9 de noviembre |
+| Los tres | Abrir el dashboard en un navegador real y ensayar la exposición | Dashboard abierto en navegador el 8 de noviembre; cada integrante ensayó su parte por separado, sin ensayo conjunto |
 | Arturo | Corrida de reproducibilidad con `python main.py` y corrección de la p. 39 del reporte | Hecho el 6 y 7 de noviembre (PR #6) |
 | Arturo | Auditoría final contra el enunciado y cierre de documentos | Hecho el 8 de noviembre |
 
